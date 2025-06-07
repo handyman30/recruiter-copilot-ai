@@ -29,6 +29,17 @@ app.use('/api/job-descriptions', jobDescriptionRoutes);
 app.use('/api/candidates', candidateRoutes);
 app.use('/api/analysis', analysisRoutes);
 
+// Serve static files in production
+if (process.env.NODE_ENV === 'production') {
+  // Serve the built frontend files
+  app.use(express.static(path.join(__dirname, '../../client/dist')));
+  
+  // Handle all other routes by serving the index.html
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../../client/dist/index.html'));
+  });
+}
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
