@@ -23,28 +23,34 @@ api.interceptors.request.use(
   }
 );
 
-// Handle auth errors
+// Handle auth errors and connection errors for demo mode
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      const token = localStorage.getItem('token');
-      if (token) {
-        // Only reload if we had a token (not in demo mode)
-        localStorage.removeItem('token');
-        window.location.reload();
-      }
-      // In demo mode (no token), just return mock data instead of erroring
+    const token = localStorage.getItem('token');
+    
+    // If no token (demo mode), return mock data for any error
+    if (!token) {
+      console.log('Demo mode: returning mock data for', error.config?.url);
       return Promise.resolve({
-        data: getDemoResponse(error.config.url, error.config.method)
+        data: getDemoResponse(error.config?.url, error.config?.method)
       });
     }
+    
+    // If we have a token but get 401, it's expired
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token');
+      window.location.reload();
+    }
+    
     return Promise.reject(error);
   }
 );
 
 // Demo mode mock responses
 function getDemoResponse(url: string, method: string) {
+  console.log('getDemoResponse called with:', url, method);
+  
   const demoJobs = [
     {
       id: 'demo-job-1',
@@ -83,23 +89,23 @@ function getDemoResponse(url: string, method: string) {
     }
   ];
 
-  const demoAnalyses = [
-    {
-      id: 'demo-analysis-1',
-      candidateId: 'demo-candidate-1',
-      jobId: 'demo-job-1', 
-      matchPercentage: 92,
-      topSkills: ['React', 'TypeScript', 'Node.js'],
-      missingSkills: [],
-      generatedMessage: "Hi Alex! I came across your profile and was impressed by your React and TypeScript expertise. We have an exciting Senior React Developer position at TechCorp that seems like a perfect match for your skillset. Would you be interested in learning more?",
-      candidate: demoCandidates[0],
-      job: demoJobs[0],
-      createdAt: new Date().toISOString()
-    }
-  ];
+  const demoAnalysis = {
+    id: 'demo-analysis-1',
+    candidateId: 'demo-candidate-1',
+    jobId: 'demo-job-1', 
+    matchPercentage: 92,
+    topSkills: ['React', 'TypeScript', 'Node.js'],
+    missingSkills: [],
+    generatedMessage: "Hi Alex! I came across your profile and was impressed by your React and TypeScript expertise. We have an exciting Senior React Developer position at TechCorp that seems like a perfect match for your skillset. Would you be interested in learning more?",
+    candidate: demoCandidates[0],
+    job: demoJobs[0],
+    createdAt: new Date().toISOString()
+  };
 
   // Route-based mock responses
-  if (url?.includes('/job-descriptions')) {
+  if (!url) return [];
+
+  if (url.includes('/job-descriptions')) {
     if (method?.toLowerCase() === 'get') {
       return demoJobs;
     }
@@ -113,7 +119,7 @@ function getDemoResponse(url: string, method: string) {
     }
   }
 
-  if (url?.includes('/candidates')) {
+  if (url.includes('/candidates')) {
     if (method?.toLowerCase() === 'get') {
       return demoCandidates;
     }
@@ -127,15 +133,22 @@ function getDemoResponse(url: string, method: string) {
     }
   }
 
-  if (url?.includes('/analysis')) {
+  if (url.includes('/analysis')) {
     if (method?.toLowerCase() === 'get') {
-      return demoAnalyses;
+      // If it's a specific analysis request (e.g., /analysis/candidateId/jobId)
+      if (url.match(/\/analysis\/[^\/]+\/[^\/]+$/)) {
+        return demoAnalysis;
+      }
+      // Otherwise return list of analyses
+      return [demoAnalysis];
     }
     if (method?.toLowerCase() === 'post') {
-      return demoAnalyses[0];
+      // Return analysis result for any POST to analysis
+      return demoAnalysis;
     }
   }
 
+  console.log('No mock data matched for:', url, method);
   return [];
 }
 
