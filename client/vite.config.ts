@@ -13,4 +13,9 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    outDir: 'dist',
+    // Ensure assets are served from root path in production
+    assetsDir: 'assets',
+  },
 }); 
