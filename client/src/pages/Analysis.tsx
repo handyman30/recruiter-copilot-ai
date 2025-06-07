@@ -1,6 +1,6 @@
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Copy, RefreshCw, Loader2 } from 'lucide-react';
+import { Copy, Loader2 } from 'lucide-react';
 import { analysisApi } from '../services/api';
 
 function Analysis() {
@@ -61,7 +61,7 @@ function Analysis() {
         <div className="card">
           <h3 className="text-lg font-semibold text-gray-900 mb-3">Top Matching Skills</h3>
           <div className="space-y-2">
-            {analysis.topSkills.map((skill, index) => (
+            {analysis.topSkills.map((skill: string, index: number) => (
               <div key={index} className="flex items-center">
                 <span className="text-green-500 mr-2">✓</span>
                 <span className="text-gray-700">{skill}</span>
@@ -74,7 +74,7 @@ function Analysis() {
           <h3 className="text-lg font-semibold text-gray-900 mb-3">Missing Skills</h3>
           <div className="space-y-2">
             {analysis.missingSkills.length > 0 ? (
-              analysis.missingSkills.map((skill, index) => (
+              analysis.missingSkills.map((skill: string, index: number) => (
                 <div key={index} className="flex items-center">
                   <span className="text-red-500 mr-2">×</span>
                   <span className="text-gray-700">{skill}</span>

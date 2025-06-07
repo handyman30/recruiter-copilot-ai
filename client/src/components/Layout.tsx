@@ -1,5 +1,5 @@
 import { Outlet, NavLink } from 'react-router-dom';
-import { FileText, Users, BarChart3, Home } from 'lucide-react';
+import { FileText, Users, Home } from 'lucide-react';
 
 function Layout() {
   return (

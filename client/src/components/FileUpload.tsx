@@ -5,7 +5,6 @@ import { clsx } from 'clsx';
 
 interface FileUploadProps {
   onFileSelect: (file: File) => void;
-  accept?: string;
   maxSize?: number;
   label?: string;
   description?: string;
@@ -14,7 +13,6 @@ interface FileUploadProps {
 
 function FileUpload({
   onFileSelect,
-  accept = '.pdf,.doc,.docx',
   maxSize = 10 * 1024 * 1024, // 10MB
   label = 'Upload File',
   description = 'Drag and drop or click to select',
