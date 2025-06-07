@@ -34,7 +34,7 @@ function JobDescriptions() {
 
   const filteredJobs = jobDescriptions.filter(job =>
     job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    job.requiredSkills.some(skill => skill.toLowerCase().includes(searchTerm.toLowerCase()))
+    (job.requiredSkills && job.requiredSkills.some(skill => skill.toLowerCase().includes(searchTerm.toLowerCase())))
   );
 
   return (
@@ -103,18 +103,24 @@ function JobDescriptions() {
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex flex-wrap gap-1">
-                            {job.requiredSkills.slice(0, 3).map((skill, index) => (
-                              <span
-                                key={index}
-                                className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800"
-                              >
-                                {skill}
-                              </span>
-                            ))}
-                            {job.requiredSkills.length > 3 && (
-                              <span className="text-xs text-gray-500">
-                                +{job.requiredSkills.length - 3} more
-                              </span>
+                            {job.requiredSkills && job.requiredSkills.length > 0 ? (
+                              <>
+                                {job.requiredSkills.slice(0, 3).map((skill, index) => (
+                                  <span
+                                    key={index}
+                                    className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800"
+                                  >
+                                    {skill}
+                                  </span>
+                                ))}
+                                {job.requiredSkills.length > 3 && (
+                                  <span className="text-xs text-gray-500">
+                                    +{job.requiredSkills.length - 3} more
+                                  </span>
+                                )}
+                              </>
+                            ) : (
+                              <span className="text-xs text-gray-500">No skills listed</span>
                             )}
                           </div>
                         </td>

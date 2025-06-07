@@ -36,7 +36,7 @@ function Candidates() {
   const filteredCandidates = candidates.filter(candidate =>
     candidate.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     candidate.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    candidate.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
+    (candidate.tags && candidate.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase())))
   );
 
   return (
@@ -122,18 +122,24 @@ function Candidates() {
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex flex-wrap gap-1">
-                            {candidate.tags.slice(0, 3).map((tag, index) => (
-                              <span
-                                key={index}
-                                className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
-                              >
-                                {tag}
-                              </span>
-                            ))}
-                            {candidate.tags.length > 3 && (
-                              <span className="text-xs text-gray-500">
-                                +{candidate.tags.length - 3} more
-                              </span>
+                            {candidate.tags && candidate.tags.length > 0 ? (
+                              <>
+                                {candidate.tags.slice(0, 3).map((tag, index) => (
+                                  <span
+                                    key={index}
+                                    className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
+                                  >
+                                    {tag}
+                                  </span>
+                                ))}
+                                {candidate.tags.length > 3 && (
+                                  <span className="text-xs text-gray-500">
+                                    +{candidate.tags.length - 3} more
+                                  </span>
+                                )}
+                              </>
+                            ) : (
+                              <span className="text-xs text-gray-500">No tags</span>
                             )}
                           </div>
                         </td>

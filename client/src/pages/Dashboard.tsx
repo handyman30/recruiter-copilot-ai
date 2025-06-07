@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { FileText, Users, TrendingUp, ArrowRight, Loader2, Zap } from 'lucide-react';
 import FileUpload from '../components/FileUpload';
 import { jobDescriptionApi, candidateApi, analysisApi } from '../services/api';
@@ -8,6 +8,7 @@ import { JobDescription, Candidate, Analysis } from '../types';
 
 function Dashboard() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [selectedJob, setSelectedJob] = useState<string>('');
   const [selectedCandidate, setSelectedCandidate] = useState<string>('');
   const [recentJobUpload, setRecentJobUpload] = useState<string | null>(null);
@@ -58,7 +59,7 @@ function Dashboard() {
       setRecentJobUpload(null);
       setRecentCandidateUpload(null);
       // Navigate to the analysis page
-      window.location.href = `/analysis/${data.candidateId}/${data.jobId}`;
+      navigate(`/analysis/${data.candidateId}/${data.jobId}`);
     },
   });
 
@@ -116,7 +117,10 @@ function Dashboard() {
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="card">
+        <div 
+          className="card cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => navigate('/jobs')}
+        >
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Job Descriptions</p>
@@ -125,7 +129,10 @@ function Dashboard() {
             <FileText className="h-8 w-8 text-primary-500" />
           </div>
         </div>
-        <div className="card">
+        <div 
+          className="card cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => navigate('/candidates')}
+        >
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Candidates</p>
@@ -134,7 +141,10 @@ function Dashboard() {
             <Users className="h-8 w-8 text-primary-500" />
           </div>
         </div>
-        <div className="card">
+        <div 
+          className="card cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => navigate('/candidates')}
+        >
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Analyses</p>
