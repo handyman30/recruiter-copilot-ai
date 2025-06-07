@@ -1,0 +1,65 @@
+// This is your Prisma schema file
+// Learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model JobDescription {
+  id          String   @id @default(cuid())
+  title       String
+  company     String?
+  fileUrl     String?  // Store file path or S3 URL
+  parsedText  String   @db.Text
+  skills      Json     // Array of required skills
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  analyses    Analysis[]
+}
+
+model Candidate {
+  id             String   @id @default(cuid())
+  name           String
+  email          String?
+  phone          String?
+  fileUrl        String?
+  parsedText     String   @db.Text
+  
+  // Auto-generated tags
+  location       String?
+  seniority      String?
+  techStack      Json     // Array of skills
+  
+  // Analysis results
+  analyses       Analysis[]
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Analysis {
+  id              String   @id @default(cuid())
+  candidateId     String
+  jobId           String
+  
+  matchPercentage Int
+  topSkills       Json     // Array of top 3 skills
+  missingSkills   Json     // Array of missing skills
+  
+  generatedMessage String?  @db.Text
+  messageTemplate  String?  // 'high_match' | 'mid_match' | 'low_match'
+  
+  candidate       Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  job             JobDescription @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@unique([candidateId, jobId]) // Prevent duplicate analyses
+} 
