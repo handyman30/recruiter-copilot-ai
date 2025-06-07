@@ -1,7 +1,10 @@
 import { Outlet, NavLink } from 'react-router-dom';
-import { FileText, Users, Home } from 'lucide-react';
+import { FileText, Users, Home, LogOut, User } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 function Layout() {
+  const { user, logout } = useAuth();
+
   return (
     <div className="min-h-screen bg-gray-50">
       <nav className="bg-white shadow-sm border-b border-gray-200">
@@ -54,6 +57,29 @@ function Layout() {
                   Candidates
                 </NavLink>
               </div>
+            </div>
+            
+            {/* User menu - only show if authenticated */}
+            <div className="flex items-center space-x-4">
+              {user ? (
+                <>
+                  <div className="text-sm text-gray-700">
+                    Welcome, <span className="font-medium">{user.name || user.email}</span>
+                  </div>
+                  <button
+                    onClick={logout}
+                    className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                  >
+                    <LogOut className="w-4 h-4 mr-1" />
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <div className="flex items-center text-sm text-gray-500">
+                  <User className="w-4 h-4 mr-1" />
+                  Demo Mode
+                </div>
+              )}
             </div>
           </div>
         </div>
