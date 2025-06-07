@@ -1,0 +1,16 @@
+{
+  "name": "recruiter-copilot-ai",
+  "version": "1.0.0",
+  "description": "AI-powered resume screening for recruiters",
+  "private": true,
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "install:all": "npm install --prefix server && npm install --prefix client",
+    "build:server": "npm run build --prefix server",
+    "build:client": "npm run build --prefix client",
+    "build": "npm run build:server && npm run build:client",
+    "start": "npm start --prefix server"
+  }
+} 

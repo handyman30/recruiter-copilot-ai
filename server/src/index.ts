@@ -18,7 +18,9 @@ const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(cors({
-  origin: 'http://localhost:5173', // Vite default port
+  origin: process.env.NODE_ENV === 'production' 
+    ? true // Allow all origins in production, or specify your Railway domain
+    : 'http://localhost:5173',
   credentials: true
 }));
 app.use(express.json());
