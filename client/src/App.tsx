@@ -4,6 +4,7 @@ import { Loader2, ArrowRight, Sparkles } from 'lucide-react';
 import { useState } from 'react';
 import Layout from './components/Layout';
 import AuthForm from './components/AuthForm';
+import GuidedTour from './components/GuidedTour';
 import Dashboard from './pages/Dashboard';
 import JobDescriptions from './pages/JobDescriptions';
 import Candidates from './pages/Candidates';
@@ -46,6 +47,7 @@ function AppContent() {
   const { user, isLoading } = useAuth();
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
+  const [showTour, setShowTour] = useState(false);
 
   if (isLoading) {
     return (
@@ -62,10 +64,14 @@ function AppContent() {
   if (showAuth || (!user && !isDemoMode)) {
     return (
       <AuthForm 
-        onSuccess={() => setShowAuth(false)}
+        onSuccess={() => {
+          setShowAuth(false);
+          setShowTour(true); // Show tour for new users
+        }}
         onDemoMode={() => {
           setIsDemoMode(true);
           setShowAuth(false);
+          setShowTour(true); // Show tour for demo users too
         }}
       />
     );
@@ -74,6 +80,14 @@ function AppContent() {
   // Main app content (for authenticated users OR demo mode)
   return (
     <div>
+      {/* Guided Tour */}
+      {showTour && (
+        <GuidedTour
+          onComplete={() => setShowTour(false)}
+          onSkip={() => setShowTour(false)}
+        />
+      )}
+
       {/* Show demo banner if in demo mode */}
       {isDemoMode && !user && (
         <DemoBanner onSignUp={() => setShowAuth(true)} />

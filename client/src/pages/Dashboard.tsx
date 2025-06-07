@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
-import { FileText, Users, TrendingUp, ArrowRight, Loader2, Zap } from 'lucide-react';
+import { FileText, Users, TrendingUp, ArrowRight, Loader2, Zap, AlertCircle, CheckCircle2 } from 'lucide-react';
 import FileUpload from '../components/FileUpload';
 import { jobDescriptionApi, candidateApi, analysisApi } from '../services/api';
 import { JobDescription, Candidate, Analysis } from '../types';
@@ -69,6 +69,12 @@ function Dashboard() {
     }
   };
 
+  // Check completion status
+  const hasJobs = jobs.length > 0;
+  const hasCandidates = candidates.length > 0;
+  const hasAnalyses = analyses.length > 0;
+  const canAnalyze = hasJobs && hasCandidates;
+
   return (
     <div className="space-y-8">
       <div>
@@ -78,40 +84,105 @@ function Dashboard() {
         </p>
       </div>
 
-      {/* Quick Match Banner - Shows when both items are recently uploaded */}
-      {recentJobUpload && recentCandidateUpload && (
-        <div className="bg-primary-50 border-2 border-primary-200 rounded-lg p-6 animate-slide-up">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-semibold text-primary-900 flex items-center">
-                <Zap className="h-5 w-5 mr-2" />
-                Ready to Match!
-              </h3>
-              <p className="text-primary-700 mt-1">
-                You've uploaded both a job description and a resume. Run the analysis now!
-              </p>
+      {/* Getting Started Banner - Shows when user has no data */}
+      {!hasJobs && !hasCandidates && (
+        <div className="bg-gradient-to-r from-primary-50 to-blue-50 border-2 border-primary-200 rounded-xl p-8 text-center">
+          <div className="max-w-md mx-auto">
+            <Zap className="h-12 w-12 text-primary-500 mx-auto mb-4" />
+            <h3 className="text-xl font-bold text-gray-900 mb-2">
+              Welcome! Let's get started 🚀
+            </h3>
+            <p className="text-gray-600 mb-6">
+              Upload a job description and candidate resume to see the magic of AI-powered matching!
+            </p>
+            <div className="flex items-center justify-center space-x-4 text-sm">
+              <div className="flex items-center text-gray-500">
+                <div className="w-6 h-6 rounded-full border-2 border-gray-300 flex items-center justify-center mr-2">
+                  1
+                </div>
+                Upload Job
+              </div>
+              <ArrowRight className="h-4 w-4 text-gray-400" />
+              <div className="flex items-center text-gray-500">
+                <div className="w-6 h-6 rounded-full border-2 border-gray-300 flex items-center justify-center mr-2">
+                  2
+                </div>
+                Upload Resume
+              </div>
+              <ArrowRight className="h-4 w-4 text-gray-400" />
+              <div className="flex items-center text-gray-500">
+                <div className="w-6 h-6 rounded-full border-2 border-gray-300 flex items-center justify-center mr-2">
+                  3
+                </div>
+                Get Analysis
+              </div>
             </div>
-            <button
-              onClick={() => analyzeMutation.mutate({ 
-                candidateId: recentCandidateUpload, 
-                jobId: recentJobUpload 
-              })}
-              disabled={analyzeMutation.isPending}
-              className="btn-primary flex items-center"
-            >
-              {analyzeMutation.isPending ? (
-                <>
-                  <Loader2 className="animate-spin h-4 w-4 mr-2" />
-                  Analyzing...
-                </>
-              ) : (
-                <>
-                  <Zap className="h-4 w-4 mr-2" />
-                  Run Match Analysis
-                </>
-              )}
-            </button>
           </div>
+        </div>
+      )}
+
+      {/* Progress Banner - Shows when partially complete */}
+      {(hasJobs || hasCandidates) && !canAnalyze && (
+        <div className="bg-amber-50 border-2 border-amber-200 rounded-lg p-6">
+          <div className="flex items-start space-x-4">
+            <AlertCircle className="h-6 w-6 text-amber-500 mt-0.5" />
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-amber-900">
+                Almost there! 
+              </h3>
+              <p className="text-amber-700 mt-1">
+                {!hasJobs && "Upload a job description to continue."}
+                {!hasCandidates && "Upload a candidate resume to continue."}
+              </p>
+              <div className="flex items-center mt-3 space-x-4">
+                <div className={`flex items-center ${hasJobs ? 'text-green-600' : 'text-gray-400'}`}>
+                  {hasJobs ? <CheckCircle2 className="h-4 w-4 mr-1" /> : <div className="w-4 h-4 rounded-full border-2 border-current mr-1"></div>}
+                  Job Description
+                </div>
+                <div className={`flex items-center ${hasCandidates ? 'text-green-600' : 'text-gray-400'}`}>
+                  {hasCandidates ? <CheckCircle2 className="h-4 w-4 mr-1" /> : <div className="w-4 h-4 rounded-full border-2 border-current mr-1"></div>}
+                  Candidate Resume
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Ready to Match Banner - Prominent placement at top */}
+      {canAnalyze && (selectedJob && selectedCandidate || recentJobUpload && recentCandidateUpload) && (
+        <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-8 text-center">
+          <Zap className="h-12 w-12 text-green-500 mx-auto mb-4" />
+          <h3 className="text-2xl font-bold text-green-900 mb-2">
+            Ready to Run Analysis! 🎯
+          </h3>
+          <p className="text-green-700 mb-6 max-w-md mx-auto">
+            Perfect! You've uploaded both a job description and a candidate resume. 
+            Let's see how well they match!
+          </p>
+          <button
+            onClick={() => {
+              const candidateId = selectedCandidate || recentCandidateUpload;
+              const jobId = selectedJob || recentJobUpload;
+              if (candidateId && jobId) {
+                analyzeMutation.mutate({ candidateId, jobId });
+              }
+            }}
+            disabled={analyzeMutation.isPending}
+            className="inline-flex items-center px-8 py-4 bg-green-600 text-white rounded-xl font-semibold text-lg hover:bg-green-700 transition-colors shadow-lg hover:shadow-xl transform hover:scale-105"
+          >
+            {analyzeMutation.isPending ? (
+              <>
+                <Loader2 className="animate-spin h-6 w-6 mr-3" />
+                Analyzing Match...
+              </>
+            ) : (
+              <>
+                <Zap className="h-6 w-6 mr-3" />
+                Run AI Analysis
+              </>
+            )}
+          </button>
         </div>
       )}
 
@@ -158,7 +229,10 @@ function Dashboard() {
       {/* Upload Section */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="card">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Upload Job Description</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">Upload Job Description</h2>
+            {hasJobs && <CheckCircle2 className="h-5 w-5 text-green-500" />}
+          </div>
           <FileUpload
             onFileSelect={(file) => uploadJobMutation.mutate(file)}
             label="Upload Job Description"
@@ -178,7 +252,10 @@ function Dashboard() {
         </div>
 
         <div className="card">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Upload Resume</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">Upload Resume</h2>
+            {hasCandidates && <CheckCircle2 className="h-5 w-5 text-green-500" />}
+          </div>
           <FileUpload
             onFileSelect={(file) => uploadCandidateMutation.mutate(file)}
             label="Upload Resume"
@@ -198,8 +275,8 @@ function Dashboard() {
         </div>
       </div>
 
-      {/* Quick Match Section */}
-      {jobs.length > 0 && candidates.length > 0 && (
+      {/* Manual Match Section - Only show if user has data but hasn't used auto-match */}
+      {canAnalyze && !(selectedJob && selectedCandidate) && !(recentJobUpload && recentCandidateUpload) && (
         <div className="card">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Match</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -256,7 +333,7 @@ function Dashboard() {
       )}
 
       {/* Recent Analyses */}
-      {analyses.length > 0 && (
+      {hasAnalyses && (
         <div className="card">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900">Recent Analyses</h2>

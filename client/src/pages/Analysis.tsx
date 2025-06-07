@@ -1,10 +1,11 @@
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Copy, Loader2 } from 'lucide-react';
+import { Copy, Loader2, ArrowLeft, Home } from 'lucide-react';
 import { analysisApi } from '../services/api';
 
 function Analysis() {
   const { candidateId, jobId } = useParams<{ candidateId: string; jobId: string }>();
+  const navigate = useNavigate();
   
   const { data: analysis, isLoading } = useQuery({
     queryKey: ['analysis', candidateId, jobId],
@@ -31,11 +32,28 @@ function Analysis() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Match Analysis</h1>
-        <p className="mt-2 text-gray-600">
-          {analysis.candidate?.name} → {analysis.job?.title}
-        </p>
+      {/* Header with Back Button */}
+      <div className="flex items-center justify-between">
+        <div>
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="inline-flex items-center text-primary-600 hover:text-primary-700 font-medium mb-4"
+          >
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Back to Dashboard
+          </button>
+          <h1 className="text-3xl font-bold text-gray-900">Match Analysis</h1>
+          <p className="mt-2 text-gray-600">
+            {analysis.candidate?.name} → {analysis.job?.title}
+          </p>
+        </div>
+        <button
+          onClick={() => navigate('/dashboard')}
+          className="btn-secondary flex items-center"
+        >
+          <Home className="h-4 w-4 mr-2" />
+          Dashboard
+        </button>
       </div>
 
       {/* Match Score */}
@@ -105,6 +123,23 @@ function Analysis() {
           </div>
         </div>
       )}
+
+      {/* Action Buttons */}
+      <div className="flex justify-center space-x-4 pt-6">
+        <button
+          onClick={() => navigate('/dashboard')}
+          className="btn-primary px-8 py-3 text-lg"
+        >
+          <Home className="h-5 w-5 mr-2 inline" />
+          Back to Dashboard
+        </button>
+        <button
+          onClick={() => navigate('/candidates')}
+          className="btn-secondary px-8 py-3 text-lg"
+        >
+          View All Candidates
+        </button>
+      </div>
     </div>
   );
 }
