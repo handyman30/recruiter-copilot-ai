@@ -1,21 +1,25 @@
 import { Router } from 'express';
 import { prisma } from '../utils/prisma';
 import { analyzeMatch, generateFollowUpMessage } from '../utils/ai-service';
+import { authMiddleware } from '../middleware/auth';
 
 const router = Router();
+
+// Apply auth middleware to all routes
+router.use(authMiddleware);
 
 // Analyze candidate-job match
 router.post('/:candidateId/:jobId', async (req, res) => {
   try {
     const { candidateId, jobId } = req.params;
+    const userId = req.user!.userId;
     
     // Check if analysis already exists
-    const existingAnalysis = await prisma.analysis.findUnique({
+    const existingAnalysis = await prisma.analysis.findFirst({
       where: {
-        candidateId_jobId: {
-          candidateId,
-          jobId,
-        },
+        candidateId,
+        jobId,
+        userId,
       },
     });
     
@@ -23,10 +27,14 @@ router.post('/:candidateId/:jobId', async (req, res) => {
       return res.json(existingAnalysis);
     }
     
-    // Get candidate and job data
+    // Get candidate and job data (ensure they belong to the user)
     const [candidate, job] = await Promise.all([
-      prisma.candidate.findUnique({ where: { id: candidateId } }),
-      prisma.jobDescription.findUnique({ where: { id: jobId } }),
+      prisma.candidate.findFirst({ 
+        where: { id: candidateId, userId } 
+      }),
+      prisma.jobDescription.findFirst({ 
+        where: { id: jobId, userId } 
+      }),
     ]);
     
     if (!candidate || !job) {
@@ -57,6 +65,7 @@ router.post('/:candidateId/:jobId', async (req, res) => {
     // Save analysis
     const analysis = await prisma.analysis.create({
       data: {
+        userId,
         candidateId,
         jobId,
         matchPercentage: matchResult.matchPercentage,
@@ -94,17 +103,17 @@ router.post('/:candidateId/:jobId', async (req, res) => {
   }
 });
 
-// Get analysis for candidate-job pair
+// Get analysis for candidate-job pair (user-specific)
 router.get('/:candidateId/:jobId', async (req, res) => {
   try {
     const { candidateId, jobId } = req.params;
+    const userId = req.user!.userId;
     
-    const analysis = await prisma.analysis.findUnique({
+    const analysis = await prisma.analysis.findFirst({
       where: {
-        candidateId_jobId: {
-          candidateId,
-          jobId,
-        },
+        candidateId,
+        jobId,
+        userId,
       },
       include: {
         candidate: true,
@@ -123,11 +132,16 @@ router.get('/:candidateId/:jobId', async (req, res) => {
   }
 });
 
-// Regenerate message for an analysis
+// Regenerate message for an analysis (user-specific)
 router.post('/:analysisId/regenerate-message', async (req, res) => {
   try {
-    const analysis = await prisma.analysis.findUnique({
-      where: { id: req.params.analysisId },
+    const userId = req.user!.userId;
+    
+    const analysis = await prisma.analysis.findFirst({
+      where: { 
+        id: req.params.analysisId,
+        userId 
+      },
       include: { candidate: true },
     });
     
@@ -156,10 +170,13 @@ router.post('/:analysisId/regenerate-message', async (req, res) => {
   }
 });
 
-// Get all analyses
+// Get all analyses for the authenticated user
 router.get('/', async (req, res) => {
   try {
+    const userId = req.user!.userId;
+    
     const analyses = await prisma.analysis.findMany({
+      where: { userId },
       include: {
         candidate: {
           select: {

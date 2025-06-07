@@ -4,8 +4,12 @@ import { parseDocument, cleanText } from '../utils/fileParser';
 import { analyzeResume } from '../utils/ai-service';
 import { prisma } from '../utils/prisma';
 import { deleteUploadedFile } from '../utils/upload';
+import { authMiddleware } from '../middleware/auth';
 
 const router = Router();
+
+// Apply auth middleware to all routes
+router.use(authMiddleware);
 
 // Upload and analyze candidate resume
 router.post('/', upload.single('file'), async (req, res) => {
@@ -16,6 +20,7 @@ router.post('/', upload.single('file'), async (req, res) => {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
+    const userId = req.user!.userId;
     filePath = req.file.path;
     
     // Parse document
@@ -28,6 +33,7 @@ router.post('/', upload.single('file'), async (req, res) => {
     // Save to database
     const candidate = await prisma.candidate.create({
       data: {
+        userId,
         name: analysis.name,
         email: analysis.email,
         fileUrl: filePath,
@@ -59,10 +65,13 @@ router.post('/', upload.single('file'), async (req, res) => {
   }
 });
 
-// Get all candidates
+// Get all candidates for the authenticated user
 router.get('/', async (req, res) => {
   try {
+    const userId = req.user!.userId;
+    
     const candidates = await prisma.candidate.findMany({
+      where: { userId },
       orderBy: { createdAt: 'desc' },
       select: {
         id: true,
@@ -82,11 +91,16 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Get single candidate with analyses
+// Get single candidate with analyses (user-specific)
 router.get('/:id', async (req, res) => {
   try {
-    const candidate = await prisma.candidate.findUnique({
-      where: { id: req.params.id },
+    const userId = req.user!.userId;
+    
+    const candidate = await prisma.candidate.findFirst({
+      where: { 
+        id: req.params.id,
+        userId 
+      },
       include: {
         analyses: {
           include: {
@@ -113,14 +127,18 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// Get candidates for a specific job
+// Get candidates for a specific job (user-specific)
 router.get('/for-job/:jobId', async (req, res) => {
   try {
+    const userId = req.user!.userId;
+    
     const candidates = await prisma.candidate.findMany({
       where: {
+        userId,
         analyses: {
           some: {
             jobId: req.params.jobId,
+            userId, // Ensure analysis also belongs to user
           },
         },
       },
@@ -128,6 +146,7 @@ router.get('/for-job/:jobId', async (req, res) => {
         analyses: {
           where: {
             jobId: req.params.jobId,
+            userId,
           },
         },
       },
@@ -143,9 +162,22 @@ router.get('/for-job/:jobId', async (req, res) => {
   }
 });
 
-// Delete candidate
+// Delete candidate (user-specific)
 router.delete('/:id', async (req, res) => {
   try {
+    const userId = req.user!.userId;
+    
+    const candidate = await prisma.candidate.findFirst({
+      where: { 
+        id: req.params.id,
+        userId 
+      },
+    });
+    
+    if (!candidate) {
+      return res.status(404).json({ error: 'Candidate not found' });
+    }
+    
     await prisma.candidate.delete({
       where: { id: req.params.id },
     });

@@ -9,6 +9,7 @@ import cors from 'cors';
 import 'express-async-errors';
 
 // Import routes
+import authRoutes from './routes/auth';
 import jobDescriptionRoutes from './routes/jobDescriptions';
 import candidateRoutes from './routes/candidates';
 import analysisRoutes from './routes/analysis';
@@ -27,6 +28,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Routes
+app.use('/api/auth', authRoutes);
 app.use('/api/job-descriptions', jobDescriptionRoutes);
 app.use('/api/candidates', candidateRoutes);
 app.use('/api/analysis', analysisRoutes);
