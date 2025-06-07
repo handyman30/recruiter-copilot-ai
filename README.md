@@ -117,3 +117,4 @@ Built with ❤️ to help recruiters save time and find the best candidates fast
 ---
 
 **Questions?** Open an issue or reach out on [LinkedIn](your-linkedin-url)
+# Updated for Railway deployment
