@@ -50,7 +50,22 @@ if (process.env.NODE_ENV === 'production') {
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({ 
+    status: 'healthy', 
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+// Debug endpoint for AI configuration (remove in production)
+app.get('/api/debug/ai-config', (req, res) => {
+  res.json({
+    useGemini: process.env.USE_GEMINI === 'true',
+    geminiKeyPresent: !!process.env.GEMINI_API_KEY,
+    openaiKeyPresent: !!process.env.OPENAI_API_KEY,
+    nodeEnv: process.env.NODE_ENV,
+    geminiKeyLength: process.env.GEMINI_API_KEY?.length || 0,
+  });
 });
 
 // Error handling middleware

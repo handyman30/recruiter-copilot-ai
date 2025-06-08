@@ -43,10 +43,23 @@ class AIService {
     
     this.useGemini = process.env.USE_GEMINI === 'true';
     
+    console.log('🔧 Initializing AI Service...');
+    console.log(`📋 USE_GEMINI: ${process.env.USE_GEMINI}`);
+    console.log(`🔑 GEMINI_API_KEY present: ${!!process.env.GEMINI_API_KEY}`);
+    console.log(`🔑 OPENAI_API_KEY present: ${!!process.env.OPENAI_API_KEY}`);
+    
     if (this.useGemini) {
+      if (!process.env.GEMINI_API_KEY) {
+        console.error('❌ GEMINI_API_KEY is missing but USE_GEMINI=true');
+        throw new Error('GEMINI_API_KEY environment variable is required when USE_GEMINI=true');
+      }
       console.log('🚀 Using Google Gemini for AI processing (FREE!)');
-      this.gemini = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+      this.gemini = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     } else {
+      if (!process.env.OPENAI_API_KEY) {
+        console.error('❌ OPENAI_API_KEY is missing but USE_GEMINI=false');
+        throw new Error('OPENAI_API_KEY environment variable is required when USE_GEMINI=false');
+      }
       console.log('💰 Using OpenAI for AI processing');
       this.openai = new OpenAI({
         apiKey: process.env.OPENAI_API_KEY,
@@ -58,19 +71,61 @@ class AIService {
 
   private async callGemini(prompt: string): Promise<string> {
     this.initialize();
-    const model = this.gemini!.getGenerativeModel({ model: "gemini-1.5-flash" });
+    
+    if (!this.gemini) {
+      throw new Error('Gemini API not initialized - missing GEMINI_API_KEY');
+    }
+    
+    const model = this.gemini.getGenerativeModel({ model: "gemini-1.5-flash" });
     
     // Add JSON instruction to prompt for Gemini
     const enhancedPrompt = prompt + "\n\nIMPORTANT: Return ONLY valid JSON, no markdown formatting or backticks.";
     
-    const result = await model.generateContent(enhancedPrompt);
-    const response = await result.response;
-    const text = response.text();
-    
-    // Clean up response if needed (remove any markdown formatting)
-    const cleanedText = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-    
-    return cleanedText;
+    try {
+      console.log('🤖 Calling Gemini API...');
+      const result = await model.generateContent(enhancedPrompt);
+      const response = await result.response;
+      const text = response.text();
+      
+      // Clean up response if needed (remove any markdown formatting)
+      const cleanedText = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      
+      console.log('✅ Gemini API call successful');
+      return cleanedText;
+    } catch (error: any) {
+      console.error('❌ Gemini API Error:', error);
+      
+      // Handle specific Gemini API errors
+      if (error.message?.includes('RATE_LIMIT_EXCEEDED') || error.status === 429) {
+        console.error('🚫 Gemini API rate limit exceeded');
+        throw new Error('API_RATE_LIMIT: Please try again in a few minutes');
+      }
+      
+      if (error.message?.includes('QUOTA_EXCEEDED') || error.status === 403) {
+        console.error('💸 Gemini API quota exceeded');
+        throw new Error('API_QUOTA_EXCEEDED: Daily quota reached');
+      }
+      
+      if (error.message?.includes('API_KEY') || error.status === 401) {
+        console.error('🔑 Gemini API key invalid');
+        throw new Error('API_KEY_INVALID: Invalid API credentials');
+      }
+      
+      if (error.message?.includes('SAFETY') || error.message?.includes('BLOCKED')) {
+        console.error('🛡️ Content blocked by safety filters');
+        throw new Error('CONTENT_BLOCKED: Content blocked by safety filters');
+      }
+      
+      // Network or other errors
+      if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
+        console.error('🌐 Network error calling Gemini API');
+        throw new Error('NETWORK_ERROR: Unable to reach Gemini API');
+      }
+      
+      // Generic error fallback
+      console.error('🔥 Unknown Gemini API error:', error.message);
+      throw new Error(`GEMINI_ERROR: ${error.message || 'Unknown API error'}`);
+    }
   }
 
   private async callOpenAI(prompt: string, useGPT4: boolean = false): Promise<string> {
@@ -107,9 +162,32 @@ class AIService {
 
       const parsed = JSON.parse(content);
       return JobAnalysisSchema.parse(parsed);
-    } catch (error) {
-      console.error('Error parsing AI response:', error);
-      // Provide a fallback response
+    } catch (error: any) {
+      console.error('Error analyzing job description:', error);
+      
+      // Handle specific API errors
+      if (error.message?.includes('API_RATE_LIMIT')) {
+        throw new Error('Rate limit exceeded. Please try again in a few minutes.');
+      }
+      
+      if (error.message?.includes('API_QUOTA_EXCEEDED')) {
+        throw new Error('Daily API quota exceeded. Please try again tomorrow or upgrade your plan.');
+      }
+      
+      if (error.message?.includes('API_KEY_INVALID')) {
+        throw new Error('API configuration error. Please contact support.');
+      }
+      
+      if (error.message?.includes('NETWORK_ERROR')) {
+        throw new Error('Network error. Please check your connection and try again.');
+      }
+      
+      if (error.message?.includes('CONTENT_BLOCKED')) {
+        throw new Error('Content was blocked by safety filters. Please review your job description.');
+      }
+      
+      // Provide a fallback response for other errors
+      console.log('🔄 Using fallback response for job analysis');
       return {
         title: 'Software Engineer',
         company: undefined,
@@ -143,9 +221,32 @@ class AIService {
 
       const parsed = JSON.parse(content);
       return ResumeAnalysisSchema.parse(parsed);
-    } catch (error) {
-      console.error('Error parsing AI response:', error);
-      // Provide a fallback response
+    } catch (error: any) {
+      console.error('Error analyzing resume:', error);
+      
+      // Handle specific API errors
+      if (error.message?.includes('API_RATE_LIMIT')) {
+        throw new Error('Rate limit exceeded. Please try again in a few minutes.');
+      }
+      
+      if (error.message?.includes('API_QUOTA_EXCEEDED')) {
+        throw new Error('Daily API quota exceeded. Please try again tomorrow or upgrade your plan.');
+      }
+      
+      if (error.message?.includes('API_KEY_INVALID')) {
+        throw new Error('API configuration error. Please contact support.');
+      }
+      
+      if (error.message?.includes('NETWORK_ERROR')) {
+        throw new Error('Network error. Please check your connection and try again.');
+      }
+      
+      if (error.message?.includes('CONTENT_BLOCKED')) {
+        throw new Error('Content was blocked by safety filters. Please review your resume.');
+      }
+      
+      // Provide a fallback response for other errors
+      console.log('🔄 Using fallback response for resume analysis');
       return {
         name: 'Unknown Candidate',
         email: undefined,
@@ -187,9 +288,32 @@ class AIService {
 
       const parsed = JSON.parse(content);
       return MatchAnalysisSchema.parse(parsed);
-    } catch (error) {
-      console.error('Error parsing AI response:', error);
-      // Provide a fallback response
+    } catch (error: any) {
+      console.error('Error analyzing match:', error);
+      
+      // Handle specific API errors
+      if (error.message?.includes('API_RATE_LIMIT')) {
+        throw new Error('Rate limit exceeded. Please try again in a few minutes.');
+      }
+      
+      if (error.message?.includes('API_QUOTA_EXCEEDED')) {
+        throw new Error('Daily API quota exceeded. Please try again tomorrow or upgrade your plan.');
+      }
+      
+      if (error.message?.includes('API_KEY_INVALID')) {
+        throw new Error('API configuration error. Please contact support.');
+      }
+      
+      if (error.message?.includes('NETWORK_ERROR')) {
+        throw new Error('Network error. Please check your connection and try again.');
+      }
+      
+      if (error.message?.includes('CONTENT_BLOCKED')) {
+        throw new Error('Content was blocked by safety filters. Please review your inputs.');
+      }
+      
+      // Provide a fallback response for other errors
+      console.log('🔄 Using fallback response for match analysis');
       return {
         matchPercentage: 50,
         topSkills: [],
