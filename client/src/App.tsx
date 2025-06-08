@@ -58,16 +58,16 @@ function useExitIntent(onExitIntent: () => void) {
   useEffect(() => {
     let timeoutId: number;
     
-    const handleMouseLeave = (e: MouseEvent) => {
-      if (e.clientY <= 0) {
-        trackSignupIntent('exit_intent');
-        onExitIntent();
-      }
-    };
+    // Check if we've already shown the prompt in this session
+    const hasShownExitPrompt = sessionStorage.getItem('exit_prompt_shown');
+    if (hasShownExitPrompt) {
+      return; // Don't set up any handlers if already shown
+    }
     
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       const hasData = localStorage.getItem('demo_recruiter_data');
-      if (hasData) {
+      if (hasData && !sessionStorage.getItem('exit_prompt_shown')) {
+        sessionStorage.setItem('exit_prompt_shown', 'true');
         e.preventDefault();
         e.returnValue = 'You have unsaved work. Sign up to keep your analyses!';
         trackSignupIntent('page_exit');
@@ -75,17 +75,18 @@ function useExitIntent(onExitIntent: () => void) {
       }
     };
 
-    // Show signup after 3 minutes of activity
+    // Show signup after 10 minutes of activity (instead of 3)
     timeoutId = window.setTimeout(() => {
-      trackSignupIntent('timer');
-      onExitIntent();
-    }, 3 * 60 * 1000);
+      if (!sessionStorage.getItem('exit_prompt_shown')) {
+        sessionStorage.setItem('exit_prompt_shown', 'true');
+        trackSignupIntent('timer');
+        onExitIntent();
+      }
+    }, 10 * 60 * 1000); // 10 minutes instead of 3
 
-    document.addEventListener('mouseleave', handleMouseLeave);
     window.addEventListener('beforeunload', handleBeforeUnload);
 
     return () => {
-      document.removeEventListener('mouseleave', handleMouseLeave);
       window.removeEventListener('beforeunload', handleBeforeUnload);
       clearTimeout(timeoutId);
     };
@@ -98,9 +99,9 @@ function AppContent() {
   const [showTour, setShowTour] = useState(false);
   const [showExitPrompt, setShowExitPrompt] = useState(false);
 
-  // Exit intent detection
+  // Exit intent detection - only if user is not logged in and hasn't seen prompt
   useExitIntent(() => {
-    if (!user && !showExitPrompt) {
+    if (!user && !showExitPrompt && !sessionStorage.getItem('exit_prompt_shown')) {
       setShowExitPrompt(true);
     }
   });
@@ -165,6 +166,7 @@ function AppContent() {
             <button
               onClick={() => {
                 trackEvent('exit_prompt_signup');
+                sessionStorage.setItem('exit_prompt_shown', 'true');
                 setShowAuth(true);
               }}
               className="w-full btn-primary py-3 text-lg"
@@ -174,6 +176,7 @@ function AppContent() {
             <button
               onClick={() => {
                 trackEvent('exit_prompt_continue');
+                sessionStorage.setItem('exit_prompt_shown', 'true');
                 setShowExitPrompt(false);
               }}
               className="w-full btn-secondary py-3"
