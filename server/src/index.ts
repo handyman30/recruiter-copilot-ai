@@ -13,6 +13,7 @@ import authRoutes from './routes/auth';
 import jobDescriptionRoutes from './routes/jobDescriptions';
 import candidateRoutes from './routes/candidates';
 import analysisRoutes from './routes/analysis';
+import analyticsRoutes from './routes/analytics';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -32,6 +33,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/job-descriptions', jobDescriptionRoutes);
 app.use('/api/candidates', candidateRoutes);
 app.use('/api/analysis', analysisRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {

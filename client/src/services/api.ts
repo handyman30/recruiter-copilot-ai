@@ -116,39 +116,104 @@ function saveDemoData(data: any) {
 function generateDemoUpload(file: File, type: 'job' | 'candidate') {
   const data = getDemoData();
   const id = `demo-${type}-${Date.now()}`;
+  const fileName = file.name.replace(/\.[^/.]+$/, "").toLowerCase();
   
   if (type === 'job') {
+    // Generate realistic job based on filename
+    let title = 'Software Developer';
+    let company = ['TechCorp', 'InnovateLabs', 'DataFlow Inc', 'CloudFirst', 'DevCo'][Math.floor(Math.random() * 5)];
+    let requirements = ['Problem Solving', 'Communication', 'Team Collaboration'];
+    
+    if (fileName.includes('senior') || fileName.includes('sr')) {
+      title = 'Senior Software Engineer';
+      requirements = ['React', 'TypeScript', 'Node.js', 'AWS', 'Leadership'];
+    } else if (fileName.includes('frontend') || fileName.includes('react')) {
+      title = 'Frontend Developer';
+      requirements = ['React', 'JavaScript', 'CSS', 'HTML', 'TypeScript'];
+    } else if (fileName.includes('backend') || fileName.includes('node')) {
+      title = 'Backend Developer';
+      requirements = ['Node.js', 'PostgreSQL', 'API Design', 'TypeScript', 'AWS'];
+    } else if (fileName.includes('fullstack') || fileName.includes('full')) {
+      title = 'Full Stack Engineer';
+      requirements = ['React', 'Node.js', 'PostgreSQL', 'TypeScript', 'AWS'];
+    } else if (fileName.includes('data') || fileName.includes('analyst')) {
+      title = 'Data Analyst';
+      requirements = ['Python', 'SQL', 'Excel', 'Data Visualization', 'Statistics'];
+    } else if (fileName.includes('product') || fileName.includes('manager')) {
+      title = 'Product Manager';
+      requirements = ['Product Strategy', 'Agile', 'Stakeholder Management', 'Analytics', 'Communication'];
+    }
+
     const newJob = {
       id,
-      title: `Demo Job: ${file.name.replace(/\.[^/.]+$/, "")}`,
-      company: 'Demo Company',
-      skills: { required: ['Demo Skill', 'Communication'], niceToHave: ['Leadership'] },
+      title,
+      company,
+      location: ['San Francisco, CA', 'New York, NY', 'Remote', 'Austin, TX', 'Seattle, WA'][Math.floor(Math.random() * 5)],
+      requirements: requirements.join(', '),
+      skills: { required: requirements.slice(0, 3), niceToHave: requirements.slice(3) },
       createdAt: new Date().toISOString()
     };
     data.jobs.push(newJob);
     saveDemoData(data);
     return newJob;
   } else {
+    // Generate realistic candidate based on filename
+    const firstNames = ['Alex', 'Jordan', 'Taylor', 'Casey', 'Morgan', 'Riley', 'Avery', 'Quinn', 'Sam', 'Drew'];
+    const lastNames = ['Johnson', 'Williams', 'Brown', 'Davis', 'Miller', 'Wilson', 'Moore', 'Taylor', 'Anderson', 'Chen'];
+    
+    let name = `${firstNames[Math.floor(Math.random() * firstNames.length)]} ${lastNames[Math.floor(Math.random() * lastNames.length)]}`;
+    let techStack = ['JavaScript', 'Problem Solving', 'Communication'];
+    let seniority = 'Mid-level';
+    
+    // Extract name from filename if it looks like a person's name
+    const nameMatch = fileName.match(/([a-z]+)\s*([a-z]+)/);
+    if (nameMatch && nameMatch[1].length > 2 && nameMatch[2].length > 2) {
+      name = `${nameMatch[1].charAt(0).toUpperCase() + nameMatch[1].slice(1)} ${nameMatch[2].charAt(0).toUpperCase() + nameMatch[2].slice(1)}`;
+    }
+    
+    // Determine skills based on filename
+    if (fileName.includes('senior') || fileName.includes('sr') || fileName.includes('lead')) {
+      seniority = 'Senior';
+      techStack = ['React', 'TypeScript', 'Node.js', 'AWS', 'Leadership', 'Mentoring'];
+    } else if (fileName.includes('frontend') || fileName.includes('react') || fileName.includes('ui')) {
+      techStack = ['React', 'JavaScript', 'CSS', 'TypeScript', 'HTML', 'Redux'];
+    } else if (fileName.includes('backend') || fileName.includes('node') || fileName.includes('api')) {
+      techStack = ['Node.js', 'PostgreSQL', 'Express', 'TypeScript', 'REST APIs', 'MongoDB'];
+    } else if (fileName.includes('fullstack') || fileName.includes('full')) {
+      techStack = ['React', 'Node.js', 'PostgreSQL', 'TypeScript', 'AWS', 'Docker'];
+    } else if (fileName.includes('data') || fileName.includes('analyst')) {
+      techStack = ['Python', 'SQL', 'Pandas', 'Data Analysis', 'Excel', 'Tableau'];
+    } else if (fileName.includes('junior') || fileName.includes('entry') || fileName.includes('jr')) {
+      seniority = 'Junior';
+      techStack = ['JavaScript', 'HTML', 'CSS', 'React', 'Git', 'Problem Solving'];
+    }
+
     const newCandidate = {
       id,
-      name: `Demo Candidate: ${file.name.replace(/\.[^/.]+$/, "")}`,
-      email: 'demo@example.com',
-      location: 'Demo City',
-      seniority: 'Demo Level',
-      techStack: ['Demo Skill', 'Problem Solving'],
+      name,
+      email: `${name.toLowerCase().replace(' ', '.')}@email.com`,
+      phone: '+1 (555) ' + Math.floor(Math.random() * 900 + 100) + '-' + Math.floor(Math.random() * 9000 + 1000),
+      location: ['San Francisco, CA', 'New York, NY', 'Los Angeles, CA', 'Austin, TX', 'Seattle, WA', 'Remote'][Math.floor(Math.random() * 6)],
+      seniority,
+      techStack,
+      experience: seniority === 'Senior' ? Math.floor(Math.random() * 5 + 5) + ' years' : 
+                 seniority === 'Junior' ? Math.floor(Math.random() * 2 + 1) + ' years' :
+                 Math.floor(Math.random() * 4 + 2) + ' years',
       createdAt: new Date().toISOString()
     };
     data.candidates.push(newCandidate);
     saveDemoData(data);
+    // Return the candidate in the format expected by Dashboard
     return {
       id: newCandidate.id,
       name: newCandidate.name,
       email: newCandidate.email,
-      tags: {
-        location: newCandidate.location,
-        seniority: newCandidate.seniority,
-        tech: newCandidate.techStack
-      }
+      location: newCandidate.location,
+      seniority: newCandidate.seniority,
+      techStack: newCandidate.techStack,
+      experience: newCandidate.experience,
+      phone: newCandidate.phone,
+      createdAt: newCandidate.createdAt
     };
   }
 }

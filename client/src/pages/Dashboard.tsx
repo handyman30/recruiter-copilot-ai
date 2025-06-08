@@ -20,193 +20,56 @@ function Dashboard() {
   // Queries
   const { data: jobs = [] } = useQuery({
     queryKey: ['jobs'],
-    queryFn: () => {
-      if (!user) {
-        // Demo mode - get from localStorage
-        const demoData = JSON.parse(localStorage.getItem('demo_recruiter_data') || '{}');
-        return demoData.jobs || [];
-      }
-      return jobDescriptionApi.getAll();
-    },
+    queryFn: jobDescriptionApi.getAll,
   });
 
   const { data: candidates = [] } = useQuery({
     queryKey: ['candidates'],
-    queryFn: () => {
-      if (!user) {
-        // Demo mode - get from localStorage
-        const demoData = JSON.parse(localStorage.getItem('demo_recruiter_data') || '{}');
-        return demoData.candidates || [];
-      }
-      return candidateApi.getAll();
-    },
+    queryFn: candidateApi.getAll,
   });
 
   const { data: analyses = [] } = useQuery({
     queryKey: ['analyses'],
-    queryFn: () => {
-      if (!user) {
-        // Demo mode - get from localStorage
-        const demoData = JSON.parse(localStorage.getItem('demo_recruiter_data') || '{}');
-        return demoData.analyses || [];
-      }
-      return analysisApi.getAll();
-    },
+    queryFn: analysisApi.getAll,
   });
-
-  // Generate instant demo analysis result
-  const generateDemoAnalysis = (candidateId: string, jobId: string) => {
-    const matchPercentages = [78, 82, 89, 94, 76, 91, 85, 88];
-    const matchPercentage = matchPercentages[Math.floor(Math.random() * matchPercentages.length)];
-    
-    const skillSets = [
-      ['React', 'TypeScript', 'Node.js', 'AWS', 'PostgreSQL'],
-      ['Python', 'Django', 'Machine Learning', 'Docker', 'Kubernetes'],
-      ['Java', 'Spring Boot', 'Microservices', 'Redis', 'MongoDB'],
-      ['JavaScript', 'Vue.js', 'Express', 'GraphQL', 'MySQL'],
-      ['C#', '.NET Core', 'Azure', 'SQL Server', 'DevOps']
-    ];
-    const topSkills = skillSets[Math.floor(Math.random() * skillSets.length)];
-    
-    const summaries = [
-      "Strong technical background with excellent problem-solving skills. Experience aligns well with role requirements.",
-      "Solid software development experience with modern technologies. Good cultural fit based on background.",
-      "Experienced professional with relevant skills. Shows potential for growth in this position.",
-      "Well-rounded candidate with strong technical foundation. Communication skills evident from experience.",
-      "Proven track record in similar roles. Technical expertise matches job requirements closely."
-    ];
-    
-    return {
-      id: `demo_analysis_${Date.now()}`,
-      candidateId,
-      jobId,
-      matchPercentage,
-      topSkills,
-      summary: summaries[Math.floor(Math.random() * summaries.length)],
-      strengths: [
-        "Technical expertise in required technologies",
-        "Relevant industry experience",
-        "Strong educational background",
-        "Good communication skills"
-      ],
-      concerns: matchPercentage < 85 ? [
-        "Some gaps in specific technologies",
-        "Limited experience with certain tools"
-      ] : [],
-      recommendation: matchPercentage >= 85 ? "Strong candidate - recommend interview" : "Good candidate - worth considering",
-      candidate: null,
-      job: null,
-      createdAt: new Date().toISOString()
-    };
-  };
 
   // Mutations
   const uploadJobMutation = useMutation({
-    mutationFn: async (file: File) => {
-      if (!user) {
-        // Demo mode - simulate upload and generate fake data
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate processing time
-        
-        const fakeJob = {
-          id: `demo_job_${Date.now()}`,
-          title: file.name.includes('developer') || file.name.includes('engineer') ? 'Senior Software Engineer' : 
-                file.name.includes('manager') ? 'Product Manager' :
-                file.name.includes('design') ? 'UX Designer' : 'Software Developer',
-          company: ['TechCorp', 'InnovateLabs', 'DataFlow Inc', 'CloudFirst', 'DevCo'][Math.floor(Math.random() * 5)],
-          location: ['San Francisco, CA', 'New York, NY', 'Remote', 'Austin, TX', 'Seattle, WA'][Math.floor(Math.random() * 5)],
-          requirements: 'React, TypeScript, Node.js, AWS, PostgreSQL, Agile development, team collaboration',
-          description: 'Exciting opportunity to work with cutting-edge technologies in a fast-paced environment.',
-          createdAt: new Date().toISOString()
-        };
-        
-        // Store in localStorage
-        const demoData = JSON.parse(localStorage.getItem('demo_recruiter_data') || '{}');
-        if (!demoData.jobs) demoData.jobs = [];
-        demoData.jobs.push(fakeJob);
-        localStorage.setItem('demo_recruiter_data', JSON.stringify(demoData));
-        
-        return fakeJob;
-      }
-      
-      return jobDescriptionApi.upload(file);
-    },
+    mutationFn: jobDescriptionApi.upload,
     onSuccess: (data) => {
+      console.log('✅ Job uploaded successfully:', data);
       trackUpload('job', true, { jobId: data.id, title: data.title });
-      if (user) {
-        queryClient.invalidateQueries({ queryKey: ['jobs'] });
-      } else {
-        // For demo mode, invalidate queries to refresh the UI
-        queryClient.invalidateQueries({ queryKey: ['jobs'] });
-      }
+      queryClient.invalidateQueries({ queryKey: ['jobs'] });
       setRecentJobUpload(data.id);
       setSelectedJob(data.id);
+      console.log('📌 Set recent job upload:', data.id);
     },
     onError: (error) => {
+      console.error('❌ Job upload failed:', error);
       trackUpload('job', false, { error: error.message });
     },
   });
 
   const uploadCandidateMutation = useMutation({
-    mutationFn: async (file: File) => {
-      if (!user) {
-        // Demo mode - simulate upload and generate fake data
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate processing time
-        
-        const firstNames = ['Alex', 'Jordan', 'Taylor', 'Casey', 'Morgan', 'Riley', 'Avery', 'Quinn'];
-        const lastNames = ['Johnson', 'Williams', 'Brown', 'Davis', 'Miller', 'Wilson', 'Moore', 'Taylor'];
-        const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
-        const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
-        
-        const fakeCandidate = {
-          id: `demo_candidate_${Date.now()}`,
-          name: `${firstName} ${lastName}`,
-          email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}@email.com`,
-          phone: '+1 (555) ' + Math.floor(Math.random() * 900 + 100) + '-' + Math.floor(Math.random() * 9000 + 1000),
-          location: ['San Francisco, CA', 'New York, NY', 'Los Angeles, CA', 'Austin, TX', 'Seattle, WA'][Math.floor(Math.random() * 5)],
-          experience: Math.floor(Math.random() * 8 + 2) + ' years',
-          skills: ['React', 'TypeScript', 'Node.js', 'Python', 'AWS', 'Docker', 'GraphQL', 'MongoDB'].slice(0, Math.floor(Math.random() * 4 + 3)).join(', '),
-          createdAt: new Date().toISOString()
-        };
-        
-        // Store in localStorage
-        const demoData = JSON.parse(localStorage.getItem('demo_recruiter_data') || '{}');
-        if (!demoData.candidates) demoData.candidates = [];
-        demoData.candidates.push(fakeCandidate);
-        localStorage.setItem('demo_recruiter_data', JSON.stringify(demoData));
-        
-        return fakeCandidate;
-      }
-      
-      return candidateApi.upload(file);
-    },
+    mutationFn: candidateApi.upload,
     onSuccess: (data) => {
+      console.log('✅ Candidate uploaded successfully:', data);
       trackUpload('candidate', true, { candidateId: data.id, name: data.name });
-      if (user) {
-        queryClient.invalidateQueries({ queryKey: ['candidates'] });
-      } else {
-        // For demo mode, invalidate queries to refresh the UI
-        queryClient.invalidateQueries({ queryKey: ['candidates'] });
-      }
+      queryClient.invalidateQueries({ queryKey: ['candidates'] });
       setRecentCandidateUpload(data.id);
       setSelectedCandidate(data.id);
+      console.log('📌 Set recent candidate upload:', data.id);
+      console.log('🎯 Ready to match - Job:', recentJobUpload, 'Candidate:', data.id);
     },
     onError: (error) => {
+      console.error('❌ Candidate upload failed:', error);
       trackUpload('candidate', false, { error: error.message });
     },
   });
 
   const analyzeMutation = useMutation({
-    mutationFn: async ({ candidateId, jobId }: { candidateId: string; jobId: string }) => {
-      // If user is not logged in (demo mode), return instant fake results
-      if (!user) {
-        // Add a tiny delay to make it feel more realistic
-        await new Promise(resolve => setTimeout(resolve, 800));
-        return generateDemoAnalysis(candidateId, jobId);
-      }
-      
-      // For logged in users, use real API
-      return analysisApi.analyze(candidateId, jobId);
-    },
+    mutationFn: ({ candidateId, jobId }: { candidateId: string; jobId: string }) => 
+      analysisApi.analyze(candidateId, jobId),
     onSuccess: (data) => {
       trackAnalysis(data.matchPercentage, data.candidateId, data.jobId);
       trackEvent('analysis_completed', { 
@@ -215,19 +78,7 @@ function Dashboard() {
         mode: user ? 'authenticated' : 'demo'
       });
       
-      // For demo mode, store in localStorage
-      if (!user) {
-        const demoData = JSON.parse(localStorage.getItem('demo_recruiter_data') || '{}');
-        if (!demoData.analyses) demoData.analyses = [];
-        demoData.analyses.push(data);
-        localStorage.setItem('demo_recruiter_data', JSON.stringify(demoData));
-        
-        // Show success message for demo
-        console.log(`🎉 Analysis Complete! ${data.matchPercentage}% match found`);
-      } else {
-        queryClient.invalidateQueries({ queryKey: ['analyses'] });
-      }
-      
+      queryClient.invalidateQueries({ queryKey: ['analyses'] });
       setSelectedJob('');
       setSelectedCandidate('');
       setRecentJobUpload(null);
@@ -257,6 +108,18 @@ function Dashboard() {
   const hasCandidates = candidates.length > 0;
   const hasAnalyses = analyses.length > 0;
   const canAnalyze = hasJobs && hasCandidates;
+  
+  // Debug banner conditions
+  console.log('🔍 Banner Debug:', {
+    hasJobs,
+    hasCandidates,
+    canAnalyze,
+    recentJobUpload,
+    recentCandidateUpload,
+    selectedJob,
+    selectedCandidate,
+    showReadyBanner: canAnalyze && (recentJobUpload && recentCandidateUpload)
+  });
 
   return (
     <div className="space-y-8">
@@ -332,43 +195,136 @@ function Dashboard() {
         </div>
       )}
 
-      {/* Ready to Match Banner - Prominent placement at top */}
-      {canAnalyze && (selectedJob && selectedCandidate || recentJobUpload && recentCandidateUpload) && (
-        <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-8 text-center">
+      {/* Ready to Match Banner - Show when we have both types of uploads */}
+      {canAnalyze && (recentJobUpload && recentCandidateUpload) && (
+        <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-8 text-center animate-scale-up">
           <Zap className="h-12 w-12 text-green-500 mx-auto mb-4" />
           <h3 className="text-2xl font-bold text-green-900 mb-2">
-            Ready to Run Analysis! 🎯
+            🎯 Perfect! Ready to Run Analysis!
           </h3>
           <p className="text-green-700 mb-6 max-w-md mx-auto">
-            Perfect! You've uploaded both a job description and a candidate resume. 
-            Let's see how well they match!
+            You've uploaded both a job description and candidate resume. 
+            Let's see how well they match with AI analysis!
           </p>
           <button
             onClick={() => {
-              const candidateId = selectedCandidate || recentCandidateUpload;
-              const jobId = selectedJob || recentJobUpload;
+              const candidateId = recentCandidateUpload;
+              const jobId = recentJobUpload;
               if (candidateId && jobId) {
                 trackEvent('analysis_button_clicked', { 
                   jobId: jobId, 
                   candidateId: candidateId,
-                  trigger: 'ready_banner'
+                  trigger: 'auto_ready_banner'
                 });
                 analyzeMutation.mutate({ candidateId, jobId });
               }
             }}
             disabled={analyzeMutation.isPending}
-            className="inline-flex items-center px-8 py-4 bg-green-600 text-white rounded-xl font-semibold text-lg hover:bg-green-700 transition-colors shadow-lg hover:shadow-xl transform hover:scale-105"
+            className="inline-flex items-center px-8 py-4 bg-green-600 text-white rounded-xl font-semibold text-lg hover:bg-green-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
           >
             {analyzeMutation.isPending ? (
               <>
                 <Loader2 className="animate-spin h-6 w-6 mr-3" />
-                {user ? 'Analyzing Match...' : 'AI Working Its Magic...'}
+                Analyzing Match...
               </>
             ) : (
               <>
                 <Zap className="h-6 w-6 mr-3" />
-                {user ? 'Run AI Analysis' : 'See AI Results (Free!)'}
+                Run AI Analysis Now!
               </>
+            )}
+          </button>
+        </div>
+      )}
+
+      {/* Manual Match Section - Always show when we have data */}
+      {canAnalyze && (
+        <div className="card">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Match</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Select Job
+              </label>
+              <select
+                value={selectedJob}
+                onChange={(e) => {
+                  setSelectedJob(e.target.value);
+                  trackEvent('job_selected_from_dropdown', { jobId: e.target.value, mode: user ? 'authenticated' : 'demo' });
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+              >
+                <option value="">Choose a job...</option>
+                {jobs.map((job: JobDescription) => (
+                  <option key={job.id} value={job.id}>
+                    {job.title} {job.company && `at ${job.company}`}
+                  </option>
+                ))}
+              </select>
+              {selectedJob && (
+                <div className="mt-2">
+                  {(() => {
+                    const job = jobs.find((j: JobDescription) => j.id === selectedJob);
+                    return job ? (
+                      <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded">
+                        <strong>{job.title}</strong>
+                        {job.company && <span> at {job.company}</span>}
+                        {job.location && <span> • {job.location}</span>}
+                        <div className="mt-1 line-clamp-2">{job.requirements?.slice(0, 100)}...</div>
+                      </div>
+                    ) : null;
+                  })()}
+                </div>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Select Candidate
+              </label>
+              <select
+                value={selectedCandidate}
+                onChange={(e) => {
+                  setSelectedCandidate(e.target.value);
+                  trackEvent('candidate_selected_from_dropdown', { candidateId: e.target.value, mode: user ? 'authenticated' : 'demo' });
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+              >
+                <option value="">Choose a candidate...</option>
+                {candidates.map((candidate: Candidate) => (
+                  <option key={candidate.id} value={candidate.id}>
+                    {candidate.name} {candidate.location && `- ${candidate.location}`}
+                  </option>
+                ))}
+              </select>
+              {selectedCandidate && (
+                <div className="mt-2">
+                  {(() => {
+                    const candidate = candidates.find((c: Candidate) => c.id === selectedCandidate);
+                    return candidate ? (
+                      <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded">
+                        <strong>{candidate.name}</strong>
+                        {candidate.email && <span> • {candidate.email}</span>}
+                        {candidate.location && <span> • {candidate.location}</span>}
+                        {candidate.phone && <div className="mt-1">{candidate.phone}</div>}
+                      </div>
+                    ) : null;
+                  })()}
+                </div>
+              )}
+            </div>
+          </div>
+          <button
+            onClick={handleAnalyze}
+            disabled={!selectedJob || !selectedCandidate || analyzeMutation.isPending}
+            className="mt-4 btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {analyzeMutation.isPending ? (
+              <>
+                <Loader2 className="animate-spin h-4 w-4 mr-2 inline" />
+                Analyzing...
+              </>
+            ) : (
+              'Analyze Match'
             )}
           </button>
         </div>
@@ -471,99 +427,6 @@ function Dashboard() {
           )}
         </div>
       </div>
-
-      {/* Manual Match Section - Show whenever we have data, unless auto-prompt is active */}
-      {canAnalyze && !(recentJobUpload && recentCandidateUpload && !selectedJob && !selectedCandidate) && (
-        <div className="card">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Match</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Select Job
-              </label>
-              <select
-                value={selectedJob}
-                onChange={(e) => {
-                  setSelectedJob(e.target.value);
-                  trackEvent('job_selected_from_dropdown', { jobId: e.target.value, mode: user ? 'authenticated' : 'demo' });
-                }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-              >
-                <option value="">Choose a job...</option>
-                {jobs.map((job: JobDescription) => (
-                  <option key={job.id} value={job.id}>
-                    {job.title} {job.company && `at ${job.company}`}
-                  </option>
-                ))}
-              </select>
-              {selectedJob && (
-                <div className="mt-2">
-                  {(() => {
-                    const job = jobs.find((j: JobDescription) => j.id === selectedJob);
-                    return job ? (
-                      <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded">
-                        <strong>{job.title}</strong>
-                        {job.company && <span> at {job.company}</span>}
-                        {job.location && <span> • {job.location}</span>}
-                        <div className="mt-1 line-clamp-2">{job.requirements?.slice(0, 100)}...</div>
-                      </div>
-                    ) : null;
-                  })()}
-                </div>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Select Candidate
-              </label>
-              <select
-                value={selectedCandidate}
-                onChange={(e) => {
-                  setSelectedCandidate(e.target.value);
-                  trackEvent('candidate_selected_from_dropdown', { candidateId: e.target.value, mode: user ? 'authenticated' : 'demo' });
-                }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-              >
-                <option value="">Choose a candidate...</option>
-                {candidates.map((candidate: Candidate) => (
-                  <option key={candidate.id} value={candidate.id}>
-                    {candidate.name} {candidate.location && `- ${candidate.location}`}
-                  </option>
-                ))}
-              </select>
-              {selectedCandidate && (
-                <div className="mt-2">
-                  {(() => {
-                    const candidate = candidates.find((c: Candidate) => c.id === selectedCandidate);
-                    return candidate ? (
-                      <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded">
-                        <strong>{candidate.name}</strong>
-                        {candidate.email && <span> • {candidate.email}</span>}
-                        {candidate.location && <span> • {candidate.location}</span>}
-                        {candidate.phone && <div className="mt-1">{candidate.phone}</div>}
-                      </div>
-                    ) : null;
-                  })()}
-                </div>
-              )}
-            </div>
-          </div>
-          <button
-            onClick={handleAnalyze}
-            disabled={!selectedJob || !selectedCandidate || analyzeMutation.isPending}
-            className="mt-4 btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {analyzeMutation.isPending ? (
-              <>
-                <Loader2 className="animate-spin h-4 w-4 mr-2 inline" />
-                {user ? 'Analyzing...' : 'AI Magic in Progress...'}
-              </>
-            ) : (
-              user ? 'Analyze Match' : 'Get Instant AI Results!'
-            )}
-          </button>
-        </div>
-      )}
 
       {/* Recent Analyses */}
       {hasAnalyses && (
