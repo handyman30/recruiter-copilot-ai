@@ -56,7 +56,7 @@ export const PricingPage: React.FC = () => {
           });
 
           return actions.subscription.create({
-            'plan_id': 'P-5ML4271244454362WXNWU5NQ', // Replace with your PayPal plan ID
+            'plan_id': 'P-75E28985M59195446NBCRHOI', // Replace with your PayPal plan ID
             'application_context': {
               'brand_name': 'RecruiterCopilot.ai',
               'locale': 'en-US',
