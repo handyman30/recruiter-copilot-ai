@@ -185,7 +185,7 @@ export const trackSignupIntent = (trigger: 'exit_intent' | 'save_button' | 'time
   analytics.track('signup_intent', { trigger });
 };
 
-export const trackConversion = (type: 'signup' | 'login', method?: string) => {
+export const trackConversion = (type: 'signup' | 'login', _method?: string) => {
   analytics.trackConversion(type, 1);
 };
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Copy, Loader2, ArrowLeft, Home } from 'lucide-react';
 import { trackEvent } from '../utils/analytics';
@@ -12,7 +12,7 @@ function Analysis() {
   const { user } = useAuth();
   
   // Get analysis data - from API if logged in, from localStorage if demo
-  const { data: analysis, isLoading, error } = useQuery({
+  const { data: analysis, isLoading } = useQuery({
     queryKey: ['analysis', candidateId, jobId],
     queryFn: async () => {
       if (!user) {
