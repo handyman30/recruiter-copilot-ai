@@ -27,6 +27,48 @@ router.post('/:candidateId/:jobId', async (req, res) => {
       return res.json(existingAnalysis);
     }
     
+    // Check usage limits for free users
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        subscriptionStatus: true,
+        subscriptionPlan: true
+      }
+    });
+
+    // If user is not on a paid plan, check daily usage
+    if (!user?.subscriptionStatus || user.subscriptionStatus !== 'ACTIVE' || user.subscriptionPlan === 'free') {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      const todayAnalyses = await prisma.analysis.count({
+        where: {
+          userId,
+          createdAt: {
+            gte: today,
+            lt: tomorrow
+          }
+        }
+      });
+
+      const DAILY_FREE_LIMIT = 2;
+      
+      if (todayAnalyses >= DAILY_FREE_LIMIT) {
+        return res.status(429).json({ 
+          error: 'Daily match limit exceeded', 
+          message: `You've used ${todayAnalyses}/${DAILY_FREE_LIMIT} daily matches. Upgrade to Pro for unlimited matches!`,
+          upgradeUrl: '/pricing',
+          dailyUsage: {
+            used: todayAnalyses,
+            limit: DAILY_FREE_LIMIT,
+            remaining: 0
+          }
+        });
+      }
+    }
+    
     // Get candidate and job data (ensure they belong to the user)
     const [candidate, job] = await Promise.all([
       prisma.candidate.findFirst({ 

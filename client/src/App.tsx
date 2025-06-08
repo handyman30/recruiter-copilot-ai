@@ -1,4 +1,6 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import React from 'react';
+import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Loader2, ArrowRight, Sparkles } from 'lucide-react';
 import { useState, useEffect } from 'react';
@@ -11,6 +13,7 @@ import JobDescriptions from './pages/JobDescriptions';
 import Candidates from './pages/Candidates';
 import Analysis from './pages/Analysis';
 import { AnalyticsDashboard } from './pages/Analytics';
+import PricingPage from './pages/Pricing';
 
 function DemoBanner({ onSignUp }: { onSignUp: () => void }) {
   const [isVisible, setIsVisible] = useState(true);
@@ -206,16 +209,46 @@ function AppContent() {
         <DemoBanner onSignUp={() => setShowAuth(true)} />
       )}
       
-      <Routes>
-        <Route path="/" element={<Layout />}>
-          <Route index element={<Navigate to="/dashboard" replace />} />
-          <Route path="dashboard" element={<Dashboard />} />
-          <Route path="jobs" element={<JobDescriptions />} />
-          <Route path="candidates" element={<Candidates />} />
-          <Route path="analysis/:candidateId/:jobId" element={<Analysis />} />
-          <Route path="analytics" element={<AnalyticsDashboard />} />
-        </Route>
-      </Routes>
+      <RouterProvider router={createBrowserRouter([
+        {
+          path: '/',
+          element: <Navigate to="/dashboard" replace />
+        },
+        {
+          path: '/auth',
+          element: <AuthForm />
+        },
+        {
+          path: '/pricing',
+          element: <PricingPage />
+        },
+        {
+          path: '/',
+          element: <Layout />,
+          children: [
+            {
+              path: 'dashboard',
+              element: <Dashboard />
+            },
+            {
+              path: 'jobs',
+              element: <JobDescriptions />
+            },
+            {
+              path: 'candidates',
+              element: <Candidates />
+            },
+            {
+              path: 'analytics',
+              element: <AnalyticsDashboard />
+            },
+            {
+              path: 'analysis/:candidateId/:jobId',
+              element: <Analysis />
+            }
+          ]
+        }
+      ])} />
     </div>
   );
 }

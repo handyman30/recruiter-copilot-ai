@@ -18,6 +18,13 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
+  // Subscription fields
+  subscriptionStatus    String?   @default("FREE") // FREE, ACTIVE, CANCELLED, EXPIRED
+  subscriptionPlan      String?   @default("free") // free, pro_monthly, pro_yearly
+  subscriptionId        String?   // PayPal subscription ID
+  subscriptionStartDate DateTime?
+  subscriptionEndDate   DateTime?
+  
   // Relations
   jobDescriptions JobDescription[]
   candidates      Candidate[]

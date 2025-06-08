@@ -1,5 +1,5 @@
 import { Outlet, NavLink } from 'react-router-dom';
-import { FileText, Users, Home, LogOut, User, BarChart3 } from 'lucide-react';
+import { FileText, Users, Home, LogOut, User, BarChart3, Zap } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 function Layout() {
@@ -68,6 +68,19 @@ function Layout() {
                 >
                   <BarChart3 className="w-4 h-4 mr-2" />
                   Analytics
+                </NavLink>
+                <NavLink
+                  to="/pricing"
+                  className={({ isActive }) =>
+                    `inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+                      isActive
+                        ? 'border-primary-500 text-gray-900'
+                        : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                    }`
+                  }
+                >
+                  <Zap className="w-4 h-4 mr-2" />
+                  Upgrade
                 </NavLink>
               </div>
             </div>

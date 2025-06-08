@@ -5,6 +5,7 @@ import { FileText, Users, TrendingUp, ArrowRight, Loader2, Zap, AlertCircle, Che
 import { trackEvent, trackFeatureUsed, trackAnalysisCompleted, trackAnalysisFailed } from '../utils/analytics';
 import { useAuth } from '../contexts/AuthContext';
 import FileUpload from '../components/FileUpload';
+import UsageTracker from '../components/UsageTracker';
 import { jobDescriptionApi, candidateApi, analysisApi } from '../services/api';
 import { JobDescription, Candidate, Analysis } from '../types';
 
@@ -152,6 +153,9 @@ function Dashboard() {
           Upload job descriptions and resumes to start matching candidates
         </p>
       </div>
+
+      {/* Usage Tracker for authenticated users */}
+      {user && <UsageTracker />}
 
       {/* Getting Started Banner - Shows when user has no data */}
       {!hasJobs && !hasCandidates && (
