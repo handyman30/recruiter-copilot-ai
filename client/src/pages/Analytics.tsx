@@ -38,31 +38,16 @@ export const AnalyticsDashboard: React.FC = () => {
         
         const demoData = JSON.parse(localStorage.getItem(getSessionStorageKey()) || '{}');
         const analyses = demoData.analyses || [];
-        const jobs = demoData.jobs || [];
-        const candidates = demoData.candidates || [];
 
-        // Calculate metrics from demo data
-        const totalMatches = analyses.length;
-        const averageScore = analyses.length > 0 
-          ? Math.round(analyses.reduce((sum: number, analysis: any) => sum + analysis.matchPercentage, 0) / analyses.length)
-          : 0;
-
-        // Generate last 7 days data
-        const last7Days = Array.from({ length: 7 }, (_, i) => {
-          const date = new Date();
-          date.setDate(date.getDate() - (6 - i));
-          return {
-            date: date.toISOString().split('T')[0],
-            count: i === 6 ? analyses.length : Math.floor(Math.random() * 3) // Show recent activity on today
-          };
-        });
-
+        // Calculate basic metrics from demo data
         setData({
-          totalMatches,
-          averageMatchScore: averageScore,
-          activeUsers: user ? 1 : 0, // Show 1 if logged in, 0 for demo
-          matchesByDay: last7Days,
-          recentMatches: analyses.slice(-5).reverse() // Last 5 matches
+          totalMatches: analyses.length,
+          averageMatchScore: analyses.length > 0 
+            ? Math.round(analyses.reduce((sum: number, a: any) => sum + (a.matchPercentage || 0), 0) / analyses.length)
+            : 0,
+          activeUsers: 1, // Demo mode = 1 user
+          matchesByDay: [], // Could implement this if needed
+          recentMatches: analyses.slice(0, 5)
         });
       } catch (error) {
         console.error('Error fetching analytics:', error);
@@ -101,25 +86,11 @@ export const AnalyticsDashboard: React.FC = () => {
       <div className="mt-8 bg-white rounded-lg shadow p-6">
         <h2 className="text-lg font-semibold mb-4">Recent Activity (Last 7 Days)</h2>
         <div className="h-64 flex items-end justify-between">
-          {data.matchesByDay.map((day, index) => {
-            const maxCount = Math.max(...data.matchesByDay.map(d => d.count));
-            const height = maxCount > 0 ? (day.count / maxCount) * 200 : 20;
-            
+          {data.matchesByDay.map((day) => {
             return (
-              <div key={day.date} className="flex flex-col items-center flex-1 mx-1">
-                <div 
-                  className="bg-blue-500 w-full rounded-t-lg min-h-[20px] flex items-end justify-center text-white text-xs font-semibold"
-                  style={{ height: `${height}px` }}
-                >
-                  {day.count > 0 && day.count}
-                </div>
-                <span className="text-xs mt-2 text-gray-600">
-                  {new Date(day.date).toLocaleDateString('en-US', { 
-                    weekday: 'short',
-                    month: 'short',
-                    day: 'numeric'
-                  })}
-                </span>
+              <div key={day.date} className="bg-gray-50 p-2 rounded text-center">
+                <div className="text-sm text-gray-600">{day.date}</div>
+                <div className="font-semibold">{day.count}</div>
               </div>
             );
           })}

@@ -1,4 +1,4 @@
-import React from 'react';
+import { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Copy, Loader2, ArrowLeft, Home } from 'lucide-react';
@@ -69,7 +69,7 @@ function Analysis() {
   });
 
   // Track page view
-  React.useEffect(() => {
+  useEffect(() => {
     if (analysis) {
       trackEvent('analysis_page_viewed', {
         candidateId,
