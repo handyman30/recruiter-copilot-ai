@@ -224,7 +224,12 @@ router.post('/:candidateId/:jobId', demoRateLimit, async (req, res) => {
 router.get('/:candidateId/:jobId', async (req, res) => {
   try {
     const { candidateId, jobId } = req.params;
-    const userId = req.user!.userId;
+    const userId = req.user?.userId || req.userId;
+    
+    // Demo users don't have saved analyses
+    if (!userId) {
+      return res.status(404).json({ error: 'Analysis not found' });
+    }
     
     const analysis = await prisma.analysis.findFirst({
       where: {
@@ -252,7 +257,12 @@ router.get('/:candidateId/:jobId', async (req, res) => {
 // Regenerate message for an analysis (user-specific)
 router.post('/:analysisId/regenerate-message', async (req, res) => {
   try {
-    const userId = req.user!.userId;
+    const userId = req.user?.userId || req.userId;
+    
+    // Demo users can't regenerate messages
+    if (!userId) {
+      return res.status(404).json({ error: 'Analysis not found' });
+    }
     
     const analysis = await prisma.analysis.findFirst({
       where: { 
@@ -290,7 +300,12 @@ router.post('/:analysisId/regenerate-message', async (req, res) => {
 // Get all analyses for the authenticated user
 router.get('/', async (req, res) => {
   try {
-    const userId = req.user!.userId;
+    const userId = req.user?.userId || req.userId;
+    
+    // Demo users don't have saved analyses - return empty array
+    if (!userId) {
+      return res.json([]);
+    }
     
     const analyses = await prisma.analysis.findMany({
       where: { userId },
