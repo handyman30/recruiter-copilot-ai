@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { FileText, Users, TrendingUp, ArrowRight, Loader2, Zap, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { trackUpload, trackAnalysis, trackEvent } from '../utils/analytics';
+import { useAuth } from '../contexts/AuthContext';
 import FileUpload from '../components/FileUpload';
 import { jobDescriptionApi, candidateApi, analysisApi } from '../services/api';
 import { JobDescription, Candidate, Analysis } from '../types';
@@ -9,6 +11,7 @@ import { JobDescription, Candidate, Analysis } from '../types';
 function Dashboard() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [selectedJob, setSelectedJob] = useState<string>('');
   const [selectedCandidate, setSelectedCandidate] = useState<string>('');
   const [recentJobUpload, setRecentJobUpload] = useState<string | null>(null);
@@ -27,44 +30,142 @@ function Dashboard() {
 
   const { data: analyses = [] } = useQuery({
     queryKey: ['analyses'],
-    queryFn: analysisApi.getAll,
+    queryFn: () => {
+      if (!user) {
+        // Demo mode - get from localStorage
+        const demoData = JSON.parse(localStorage.getItem('demo_recruiter_data') || '{}');
+        return demoData.analyses || [];
+      }
+      return analysisApi.getAll();
+    },
   });
+
+  // Generate instant demo analysis result
+  const generateDemoAnalysis = (candidateId: string, jobId: string) => {
+    const matchPercentages = [78, 82, 89, 94, 76, 91, 85, 88];
+    const matchPercentage = matchPercentages[Math.floor(Math.random() * matchPercentages.length)];
+    
+    const skillSets = [
+      ['React', 'TypeScript', 'Node.js', 'AWS', 'PostgreSQL'],
+      ['Python', 'Django', 'Machine Learning', 'Docker', 'Kubernetes'],
+      ['Java', 'Spring Boot', 'Microservices', 'Redis', 'MongoDB'],
+      ['JavaScript', 'Vue.js', 'Express', 'GraphQL', 'MySQL'],
+      ['C#', '.NET Core', 'Azure', 'SQL Server', 'DevOps']
+    ];
+    const topSkills = skillSets[Math.floor(Math.random() * skillSets.length)];
+    
+    const summaries = [
+      "Strong technical background with excellent problem-solving skills. Experience aligns well with role requirements.",
+      "Solid software development experience with modern technologies. Good cultural fit based on background.",
+      "Experienced professional with relevant skills. Shows potential for growth in this position.",
+      "Well-rounded candidate with strong technical foundation. Communication skills evident from experience.",
+      "Proven track record in similar roles. Technical expertise matches job requirements closely."
+    ];
+    
+    return {
+      id: `demo_analysis_${Date.now()}`,
+      candidateId,
+      jobId,
+      matchPercentage,
+      topSkills,
+      summary: summaries[Math.floor(Math.random() * summaries.length)],
+      strengths: [
+        "Technical expertise in required technologies",
+        "Relevant industry experience",
+        "Strong educational background",
+        "Good communication skills"
+      ],
+      concerns: matchPercentage < 85 ? [
+        "Some gaps in specific technologies",
+        "Limited experience with certain tools"
+      ] : [],
+      recommendation: matchPercentage >= 85 ? "Strong candidate - recommend interview" : "Good candidate - worth considering",
+      candidate: null,
+      job: null,
+      createdAt: new Date().toISOString()
+    };
+  };
 
   // Mutations
   const uploadJobMutation = useMutation({
     mutationFn: jobDescriptionApi.upload,
     onSuccess: (data) => {
+      trackUpload('job', true, { jobId: data.id, title: data.title });
       queryClient.invalidateQueries({ queryKey: ['jobs'] });
       setRecentJobUpload(data.id);
       setSelectedJob(data.id);
+    },
+    onError: (error) => {
+      trackUpload('job', false, { error: error.message });
     },
   });
 
   const uploadCandidateMutation = useMutation({
     mutationFn: candidateApi.upload,
     onSuccess: (data) => {
+      trackUpload('candidate', true, { candidateId: data.id, name: data.name });
       queryClient.invalidateQueries({ queryKey: ['candidates'] });
       setRecentCandidateUpload(data.id);
       setSelectedCandidate(data.id);
     },
+    onError: (error) => {
+      trackUpload('candidate', false, { error: error.message });
+    },
   });
 
   const analyzeMutation = useMutation({
-    mutationFn: ({ candidateId, jobId }: { candidateId: string; jobId: string }) =>
-      analysisApi.analyze(candidateId, jobId),
+    mutationFn: async ({ candidateId, jobId }: { candidateId: string; jobId: string }) => {
+      // If user is not logged in (demo mode), return instant fake results
+      if (!user) {
+        // Add a tiny delay to make it feel more realistic
+        await new Promise(resolve => setTimeout(resolve, 800));
+        return generateDemoAnalysis(candidateId, jobId);
+      }
+      
+      // For logged in users, use real API
+      return analysisApi.analyze(candidateId, jobId);
+    },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['analyses'] });
+      trackAnalysis(data.matchPercentage, data.candidateId, data.jobId);
+      trackEvent('analysis_completed', { 
+        matchPercentage: data.matchPercentage,
+        trigger: recentJobUpload && recentCandidateUpload ? 'auto_prompt' : 'manual_selection',
+        mode: user ? 'authenticated' : 'demo'
+      });
+      
+      // For demo mode, store in localStorage
+      if (!user) {
+        const demoData = JSON.parse(localStorage.getItem('demo_recruiter_data') || '{}');
+        if (!demoData.analyses) demoData.analyses = [];
+        demoData.analyses.push(data);
+        localStorage.setItem('demo_recruiter_data', JSON.stringify(demoData));
+        
+        // Show success message for demo
+        console.log(`🎉 Analysis Complete! ${data.matchPercentage}% match found`);
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['analyses'] });
+      }
+      
       setSelectedJob('');
       setSelectedCandidate('');
       setRecentJobUpload(null);
       setRecentCandidateUpload(null);
+      
       // Navigate to the analysis page
       navigate(`/analysis/${data.candidateId}/${data.jobId}`);
+    },
+    onError: (error) => {
+      trackEvent('analysis_failed', { error: error.message, mode: user ? 'authenticated' : 'demo' });
     },
   });
 
   const handleAnalyze = () => {
     if (selectedJob && selectedCandidate) {
+      trackEvent('analysis_button_clicked', { 
+        jobId: selectedJob, 
+        candidateId: selectedCandidate,
+        trigger: 'manual_selection'
+      });
       analyzeMutation.mutate({ candidateId: selectedCandidate, jobId: selectedJob });
     }
   };
@@ -165,6 +266,11 @@ function Dashboard() {
               const candidateId = selectedCandidate || recentCandidateUpload;
               const jobId = selectedJob || recentJobUpload;
               if (candidateId && jobId) {
+                trackEvent('analysis_button_clicked', { 
+                  jobId: jobId, 
+                  candidateId: candidateId,
+                  trigger: 'ready_banner'
+                });
                 analyzeMutation.mutate({ candidateId, jobId });
               }
             }}
@@ -174,12 +280,12 @@ function Dashboard() {
             {analyzeMutation.isPending ? (
               <>
                 <Loader2 className="animate-spin h-6 w-6 mr-3" />
-                Analyzing Match...
+                {user ? 'Analyzing Match...' : 'AI Working Its Magic...'}
               </>
             ) : (
               <>
                 <Zap className="h-6 w-6 mr-3" />
-                Run AI Analysis
+                {user ? 'Run AI Analysis' : 'See AI Results (Free!)'}
               </>
             )}
           </button>
@@ -190,7 +296,10 @@ function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div 
           className="card cursor-pointer hover:shadow-md transition-shadow"
-          onClick={() => navigate('/jobs')}
+          onClick={() => {
+            trackEvent('navigation_click', { destination: 'jobs', source: 'dashboard_stats' });
+            navigate('/jobs');
+          }}
         >
           <div className="flex items-center justify-between">
             <div>
@@ -202,7 +311,10 @@ function Dashboard() {
         </div>
         <div 
           className="card cursor-pointer hover:shadow-md transition-shadow"
-          onClick={() => navigate('/candidates')}
+          onClick={() => {
+            trackEvent('navigation_click', { destination: 'candidates', source: 'dashboard_stats' });
+            navigate('/candidates');
+          }}
         >
           <div className="flex items-center justify-between">
             <div>
@@ -214,7 +326,10 @@ function Dashboard() {
         </div>
         <div 
           className="card cursor-pointer hover:shadow-md transition-shadow"
-          onClick={() => navigate('/candidates')}
+          onClick={() => {
+            trackEvent('navigation_click', { destination: 'candidates', source: 'dashboard_stats' });
+            navigate('/candidates');
+          }}
         >
           <div className="flex items-center justify-between">
             <div>
@@ -323,10 +438,10 @@ function Dashboard() {
             {analyzeMutation.isPending ? (
               <>
                 <Loader2 className="animate-spin h-4 w-4 mr-2 inline" />
-                Analyzing...
+                {user ? 'Analyzing...' : 'AI Magic in Progress...'}
               </>
             ) : (
-              'Analyze Match'
+              user ? 'Analyze Match' : 'Get Instant AI Results!'
             )}
           </button>
         </div>

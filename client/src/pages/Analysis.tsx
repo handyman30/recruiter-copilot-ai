@@ -1,17 +1,71 @@
-import { useParams, useNavigate } from 'react-router-dom';
+import React from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Copy, Loader2, ArrowLeft, Home } from 'lucide-react';
+import { trackEvent } from '../utils/analytics';
+import { useAuth } from '../contexts/AuthContext';
 import { analysisApi } from '../services/api';
 
 function Analysis() {
   const { candidateId, jobId } = useParams<{ candidateId: string; jobId: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   
-  const { data: analysis, isLoading } = useQuery({
+  // Get analysis data - from API if logged in, from localStorage if demo
+  const { data: analysis, isLoading, error } = useQuery({
     queryKey: ['analysis', candidateId, jobId],
-    queryFn: () => analysisApi.get(candidateId!, jobId!),
+    queryFn: async () => {
+      if (!user) {
+        // Demo mode - get from localStorage
+        const demoData = JSON.parse(localStorage.getItem('demo_recruiter_data') || '{}');
+        const analyses = demoData.analyses || [];
+        const analysis = analyses.find((a: any) => 
+          a.candidateId === candidateId && a.jobId === jobId
+        );
+        
+        if (!analysis) {
+          throw new Error('Analysis not found in demo data');
+        }
+        
+        // Add demo candidate and job data
+        const demoJobs = demoData.jobs || [];
+        const demoCandidates = demoData.candidates || [];
+        
+        return {
+          ...analysis,
+          candidate: demoCandidates.find((c: any) => c.id === candidateId) || {
+            id: candidateId,
+            name: 'Demo Candidate',
+            email: 'demo@example.com',
+            phone: '+1 (555) 123-4567',
+            location: 'San Francisco, CA'
+          },
+          job: demoJobs.find((j: any) => j.id === jobId) || {
+            id: jobId,
+            title: 'Demo Job Position',
+            company: 'Demo Company',
+            location: 'Remote'
+          }
+        };
+      }
+      
+      // Authenticated mode - use API
+      return analysisApi.get(candidateId!, jobId!);
+    },
     enabled: !!candidateId && !!jobId,
   });
+
+  // Track page view
+  React.useEffect(() => {
+    if (analysis) {
+      trackEvent('analysis_page_viewed', {
+        candidateId,
+        jobId,
+        matchPercentage: analysis.matchPercentage,
+        mode: user ? 'authenticated' : 'demo'
+      });
+    }
+  }, [analysis, candidateId, jobId, user]);
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);

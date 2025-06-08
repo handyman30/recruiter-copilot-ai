@@ -1,7 +1,8 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Loader2, ArrowRight, Sparkles } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { trackEvent, trackSignupIntent, trackConversion } from './utils/analytics';
 import Layout from './components/Layout';
 import AuthForm from './components/AuthForm';
 import GuidedTour from './components/GuidedTour';
@@ -20,19 +21,25 @@ function DemoBanner({ onSignUp }: { onSignUp: () => void }) {
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <Sparkles className="h-5 w-5" />
-          <span className="font-medium">You're in demo mode!</span>
-          <span className="text-primary-100">Your work won't be saved.</span>
+          <span className="font-medium">You're trying RecruiterCopilot.ai!</span>
+          <span className="text-primary-100">Sign up to save your analyses and manage multiple jobs.</span>
         </div>
         <div className="flex items-center space-x-4">
           <button
-            onClick={onSignUp}
+            onClick={() => {
+              trackSignupIntent('save_button');
+              onSignUp();
+            }}
             className="bg-white text-primary-600 px-4 py-2 rounded-lg font-medium hover:bg-primary-50 transition-colors flex items-center space-x-1"
           >
-            <span>Sign Up to Save</span>
+            <span>Save My Work</span>
             <ArrowRight className="h-4 w-4" />
           </button>
           <button
-            onClick={() => setIsVisible(false)}
+            onClick={() => {
+              trackEvent('demo_banner_dismissed');
+              setIsVisible(false);
+            }}
             className="text-primary-100 hover:text-white"
           >
             ✕
@@ -43,11 +50,73 @@ function DemoBanner({ onSignUp }: { onSignUp: () => void }) {
   );
 }
 
+// Exit intent detection for signup prompt
+function useExitIntent(onExitIntent: () => void) {
+  useEffect(() => {
+    let timeoutId: number;
+    
+    const handleMouseLeave = (e: MouseEvent) => {
+      if (e.clientY <= 0) {
+        trackSignupIntent('exit_intent');
+        onExitIntent();
+      }
+    };
+    
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      const hasData = localStorage.getItem('demo_recruiter_data');
+      if (hasData) {
+        e.preventDefault();
+        e.returnValue = 'You have unsaved work. Sign up to keep your analyses!';
+        trackSignupIntent('page_exit');
+        onExitIntent();
+      }
+    };
+
+    // Show signup after 3 minutes of activity
+    timeoutId = window.setTimeout(() => {
+      trackSignupIntent('timer');
+      onExitIntent();
+    }, 3 * 60 * 1000);
+
+    document.addEventListener('mouseleave', handleMouseLeave);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      document.removeEventListener('mouseleave', handleMouseLeave);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      clearTimeout(timeoutId);
+    };
+  }, [onExitIntent]);
+}
+
 function AppContent() {
   const { user, isLoading } = useAuth();
-  const [isDemoMode, setIsDemoMode] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   const [showTour, setShowTour] = useState(false);
+  const [showExitPrompt, setShowExitPrompt] = useState(false);
+
+  // Exit intent detection
+  useExitIntent(() => {
+    if (!user && !showExitPrompt) {
+      setShowExitPrompt(true);
+    }
+  });
+
+  // Show tour on first visit
+  useEffect(() => {
+    const hasSeenTour = localStorage.getItem('recruiter_tour_completed');
+    if (!hasSeenTour && !user) {
+      trackEvent('first_visit');
+      setShowTour(true);
+    }
+  }, [user]);
+
+  // Track user login
+  useEffect(() => {
+    if (user) {
+      trackConversion('login');
+    }
+  }, [user]);
 
   if (isLoading) {
     return (
@@ -60,36 +129,79 @@ function AppContent() {
     );
   }
 
-  // Show auth form if user wants to sign up from demo mode
-  if (showAuth || (!user && !isDemoMode)) {
+  // Show auth form only when explicitly requested
+  if (showAuth) {
     return (
       <AuthForm 
         onSuccess={() => {
+          trackConversion('signup');
           setShowAuth(false);
-          setShowTour(true); // Show tour for new users
+          setShowExitPrompt(false);
         }}
         onDemoMode={() => {
-          setIsDemoMode(true);
+          trackEvent('continue_demo');
           setShowAuth(false);
-          setShowTour(true); // Show tour for demo users too
         }}
       />
     );
   }
 
-  // Main app content (for authenticated users OR demo mode)
+  // Exit intent signup prompt
+  if (showExitPrompt && !user) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 text-center animate-scale-up">
+          <div className="text-6xl mb-4">🚀</div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            Love what you see?
+          </h2>
+          <p className="text-gray-600 mb-6">
+            Sign up now to save your analyses, manage multiple jobs, and access advanced features!
+          </p>
+          <div className="space-y-3">
+            <button
+              onClick={() => {
+                trackEvent('exit_prompt_signup');
+                setShowAuth(true);
+              }}
+              className="w-full btn-primary py-3 text-lg"
+            >
+              Yes, Save My Work!
+            </button>
+            <button
+              onClick={() => {
+                trackEvent('exit_prompt_continue');
+                setShowExitPrompt(false);
+              }}
+              className="w-full btn-secondary py-3"
+            >
+              Continue Exploring
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Main app content - always accessible
   return (
     <div>
       {/* Guided Tour */}
       {showTour && (
         <GuidedTour
-          onComplete={() => setShowTour(false)}
-          onSkip={() => setShowTour(false)}
+          onComplete={() => {
+            trackEvent('tour_completed');
+            setShowTour(false);
+          }}
+          onSkip={() => {
+            trackEvent('tour_skipped');
+            setShowTour(false);
+          }}
         />
       )}
 
-      {/* Show demo banner if in demo mode */}
-      {isDemoMode && !user && (
+      {/* Show demo banner if not logged in */}
+      {!user && (
         <DemoBanner onSignUp={() => setShowAuth(true)} />
       )}
       
