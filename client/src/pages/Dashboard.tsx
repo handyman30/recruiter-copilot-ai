@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { FileText, Users, TrendingUp, ArrowRight, Loader2, Zap, AlertCircle, CheckCircle2 } from 'lucide-react';
-import { trackUpload, trackAnalysis, trackEvent } from '../utils/analytics';
+import { trackEvent, trackFeatureUsed, trackAnalysisCompleted, trackAnalysisFailed } from '../utils/analytics';
 import { useAuth } from '../contexts/AuthContext';
 import FileUpload from '../components/FileUpload';
 import { jobDescriptionApi, candidateApi, analysisApi } from '../services/api';
@@ -19,17 +19,17 @@ function Dashboard() {
 
   // Queries
   const { data: jobs = [] } = useQuery({
-    queryKey: ['jobs'],
+    queryKey: ['jobs', user?.id],
     queryFn: jobDescriptionApi.getAll,
   });
 
   const { data: candidates = [] } = useQuery({
-    queryKey: ['candidates'],
+    queryKey: ['candidates', user?.id],
     queryFn: candidateApi.getAll,
   });
 
   const { data: analyses = [] } = useQuery({
-    queryKey: ['analyses'],
+    queryKey: ['analyses', user?.id],
     queryFn: analysisApi.getAll,
   });
 
@@ -38,15 +38,24 @@ function Dashboard() {
     mutationFn: jobDescriptionApi.upload,
     onSuccess: (data) => {
       console.log('✅ Job uploaded successfully:', data);
-      trackUpload('job', true, { jobId: data.id, title: data.title });
-      queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      trackFeatureUsed('file_upload', { 
+        type: 'job', 
+        success: true, 
+        jobId: data.id, 
+        title: data.title 
+      });
+      queryClient.invalidateQueries({ queryKey: ['jobs', user?.id] });
       setRecentJobUpload(data.id);
       setSelectedJob(data.id);
       console.log('📌 Set recent job upload:', data.id);
     },
     onError: (error) => {
       console.error('❌ Job upload failed:', error);
-      trackUpload('job', false, { error: error.message });
+      trackFeatureUsed('file_upload', { 
+        type: 'job', 
+        success: false, 
+        error: error.message 
+      });
     },
   });
 
@@ -54,8 +63,13 @@ function Dashboard() {
     mutationFn: candidateApi.upload,
     onSuccess: (data) => {
       console.log('✅ Candidate uploaded successfully:', data);
-      trackUpload('candidate', true, { candidateId: data.id, name: data.name });
-      queryClient.invalidateQueries({ queryKey: ['candidates'] });
+      trackFeatureUsed('file_upload', { 
+        type: 'candidate', 
+        success: true, 
+        candidateId: data.id, 
+        name: data.name 
+      });
+      queryClient.invalidateQueries({ queryKey: ['candidates', user?.id] });
       setRecentCandidateUpload(data.id);
       setSelectedCandidate(data.id);
       console.log('📌 Set recent candidate upload:', data.id);
@@ -63,7 +77,11 @@ function Dashboard() {
     },
     onError: (error) => {
       console.error('❌ Candidate upload failed:', error);
-      trackUpload('candidate', false, { error: error.message });
+      trackFeatureUsed('file_upload', { 
+        type: 'candidate', 
+        success: false, 
+        error: error.message 
+      });
     },
   });
 
@@ -71,14 +89,19 @@ function Dashboard() {
     mutationFn: ({ candidateId, jobId }: { candidateId: string; jobId: string }) => 
       analysisApi.analyze(candidateId, jobId),
     onSuccess: (data) => {
-      trackAnalysis(data.matchPercentage, data.candidateId, data.jobId);
-      trackEvent('analysis_completed', { 
+      trackFeatureUsed('ai_analysis', {
         matchPercentage: data.matchPercentage,
-        trigger: recentJobUpload && recentCandidateUpload ? 'auto_prompt' : 'manual_selection',
-        mode: user ? 'authenticated' : 'demo'
+        candidateId: data.candidateId,
+        jobId: data.jobId,
+        matchCategory: data.matchPercentage >= 80 ? 'high' : data.matchPercentage >= 60 ? 'medium' : 'low'
       });
+      trackAnalysisCompleted(
+        data.matchPercentage,
+        recentJobUpload && recentCandidateUpload ? 'auto_prompt' : 'manual_selection',
+        user ? 'authenticated' : 'demo'
+      );
       
-      queryClient.invalidateQueries({ queryKey: ['analyses'] });
+      queryClient.invalidateQueries({ queryKey: ['analyses', user?.id] });
       setSelectedJob('');
       setSelectedCandidate('');
       setRecentJobUpload(null);
@@ -88,7 +111,7 @@ function Dashboard() {
       navigate(`/analysis/${data.candidateId}/${data.jobId}`);
     },
     onError: (error) => {
-      trackEvent('analysis_failed', { error: error.message, mode: user ? 'authenticated' : 'demo' });
+      trackAnalysisFailed(error.message, user ? 'authenticated' : 'demo');
     },
   });
 

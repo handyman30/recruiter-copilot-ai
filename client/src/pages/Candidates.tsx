@@ -1,12 +1,16 @@
 import { useEffect, useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
+import { useAuth } from '../contexts/AuthContext';
 
 interface Candidate {
   id: string;
   name: string;
   email: string;
-  resume: string;
-  tags: string[];
+  location?: string;
+  resume?: string;
+  tags?: string[];
+  techStack?: string[];
+  seniority?: string;
   createdAt: string;
 }
 
@@ -14,17 +18,43 @@ function Candidates() {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const { user } = useAuth();
 
   useEffect(() => {
     fetchCandidates();
-  }, []);
+  }, [user]);
 
   const fetchCandidates = async () => {
     try {
-      const response = await fetch('/api/candidates');
-      if (response.ok) {
-        const data = await response.json();
-        setCandidates(data);
+      if (!user) {
+        // Demo mode - get from session-specific localStorage
+        const getSessionId = () => {
+          let sessionId = sessionStorage.getItem('recruiter_session_id');
+          if (!sessionId) {
+            sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            sessionStorage.setItem('recruiter_session_id', sessionId);
+          }
+          return sessionId;
+        };
+        
+        const getSessionStorageKey = () => {
+          return `demo_recruiter_data_${getSessionId()}`;
+        };
+        
+        const demoData = JSON.parse(localStorage.getItem(getSessionStorageKey()) || '{}');
+        const candidates = demoData.candidates || [];
+        setCandidates(candidates);
+      } else {
+        // Authenticated mode - use API
+        const response = await fetch('/api/candidates', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setCandidates(data);
+        }
       }
     } catch (error) {
       console.error('Error fetching candidates:', error);
@@ -33,11 +63,18 @@ function Candidates() {
     }
   };
 
-  const filteredCandidates = candidates.filter(candidate =>
-    candidate.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    candidate.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (candidate.tags && candidate.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase())))
-  );
+  const filteredCandidates = candidates.filter(candidate => {
+    const searchLower = searchTerm.toLowerCase();
+    const nameMatch = candidate.name.toLowerCase().includes(searchLower);
+    const emailMatch = candidate.email.toLowerCase().includes(searchLower);
+    const locationMatch = candidate.location?.toLowerCase().includes(searchLower);
+    
+    // Handle both tags and techStack
+    const skills = candidate.tags || candidate.techStack || [];
+    const skillMatch = skills.some(skill => skill.toLowerCase().includes(searchLower));
+    
+    return nameMatch || emailMatch || locationMatch || skillMatch;
+  });
 
   return (
     <div>
@@ -51,7 +88,7 @@ function Candidates() {
       <div className="mt-6">
         <input
           type="text"
-          placeholder="Search by name, email, or tags..."
+          placeholder="Search by name, email, location, or skills..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
@@ -93,7 +130,10 @@ function Candidates() {
                         Email
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Tags
+                        Location
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Skills
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Added
@@ -101,53 +141,64 @@ function Candidates() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredCandidates.map((candidate) => (
-                      <tr key={candidate.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className="flex-shrink-0 h-10 w-10">
-                              <div className="h-10 w-10 rounded-full bg-indigo-500 flex items-center justify-center">
-                                <span className="text-white font-medium">
-                                  {candidate.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
-                                </span>
+                    {filteredCandidates.map((candidate) => {
+                      // Handle both tags and techStack
+                      const skills = candidate.tags || candidate.techStack || [];
+                      
+                      return (
+                        <tr key={candidate.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <div className="flex-shrink-0 h-10 w-10">
+                                <div className="h-10 w-10 rounded-full bg-indigo-500 flex items-center justify-center">
+                                  <span className="text-white font-medium">
+                                    {candidate.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="ml-4">
+                                <div className="text-sm font-medium text-gray-900">{candidate.name}</div>
+                                {candidate.seniority && (
+                                  <div className="text-sm text-gray-500">{candidate.seniority}</div>
+                                )}
                               </div>
                             </div>
-                            <div className="ml-4">
-                              <div className="text-sm font-medium text-gray-900">{candidate.name}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{candidate.email}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-500">{candidate.location || 'Not specified'}</div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex flex-wrap gap-1">
+                              {skills.length > 0 ? (
+                                <>
+                                  {skills.slice(0, 3).map((skill, index) => (
+                                    <span
+                                      key={index}
+                                      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
+                                    >
+                                      {skill}
+                                    </span>
+                                  ))}
+                                  {skills.length > 3 && (
+                                    <span className="text-xs text-gray-500">
+                                      +{skills.length - 3} more
+                                    </span>
+                                  )}
+                                </>
+                              ) : (
+                                <span className="text-xs text-gray-500">No skills listed</span>
+                              )}
                             </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">{candidate.email}</div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex flex-wrap gap-1">
-                            {candidate.tags && candidate.tags.length > 0 ? (
-                              <>
-                                {candidate.tags.slice(0, 3).map((tag, index) => (
-                                  <span
-                                    key={index}
-                                    className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
-                                  >
-                                    {tag}
-                                  </span>
-                                ))}
-                                {candidate.tags.length > 3 && (
-                                  <span className="text-xs text-gray-500">
-                                    +{candidate.tags.length - 3} more
-                                  </span>
-                                )}
-                              </>
-                            ) : (
-                              <span className="text-xs text-gray-500">No tags</span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {formatDistanceToNow(new Date(candidate.createdAt), { addSuffix: true })}
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {formatDistanceToNow(new Date(candidate.createdAt), { addSuffix: true })}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

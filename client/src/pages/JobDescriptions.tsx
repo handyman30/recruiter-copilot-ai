@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
+import { useAuth } from '../contexts/AuthContext';
 
 interface JobDescription {
   id: string;
   title: string;
-  content: string;
-  requiredSkills: string[];
+  company?: string;
+  content?: string;
+  requiredSkills?: string[];
+  skills?: { required: string[]; niceToHave: string[] };
   createdAt: string;
 }
 
@@ -13,17 +16,43 @@ function JobDescriptions() {
   const [jobDescriptions, setJobDescriptions] = useState<JobDescription[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const { user } = useAuth();
 
   useEffect(() => {
     fetchJobDescriptions();
-  }, []);
+  }, [user]);
 
   const fetchJobDescriptions = async () => {
     try {
-      const response = await fetch('/api/job-descriptions');
-      if (response.ok) {
-        const data = await response.json();
-        setJobDescriptions(data);
+      if (!user) {
+        // Demo mode - get from session-specific localStorage
+        const getSessionId = () => {
+          let sessionId = sessionStorage.getItem('recruiter_session_id');
+          if (!sessionId) {
+            sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            sessionStorage.setItem('recruiter_session_id', sessionId);
+          }
+          return sessionId;
+        };
+        
+        const getSessionStorageKey = () => {
+          return `demo_recruiter_data_${getSessionId()}`;
+        };
+        
+        const demoData = JSON.parse(localStorage.getItem(getSessionStorageKey()) || '{}');
+        const jobs = demoData.jobs || [];
+        setJobDescriptions(jobs);
+      } else {
+        // Authenticated mode - use API
+        const response = await fetch('/api/job-descriptions', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setJobDescriptions(data);
+        }
       }
     } catch (error) {
       console.error('Error fetching job descriptions:', error);
@@ -32,10 +61,17 @@ function JobDescriptions() {
     }
   };
 
-  const filteredJobs = jobDescriptions.filter(job =>
-    job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (job.requiredSkills && job.requiredSkills.some(skill => skill.toLowerCase().includes(searchTerm.toLowerCase())))
-  );
+  const filteredJobs = jobDescriptions.filter(job => {
+    const searchLower = searchTerm.toLowerCase();
+    const titleMatch = job.title.toLowerCase().includes(searchLower);
+    const companyMatch = job.company?.toLowerCase().includes(searchLower);
+    
+    // Handle both old and new skill structures
+    const skills = job.requiredSkills || job.skills?.required || [];
+    const skillMatch = skills.some(skill => skill.toLowerCase().includes(searchLower));
+    
+    return titleMatch || companyMatch || skillMatch;
+  });
 
   return (
     <div>
@@ -49,7 +85,7 @@ function JobDescriptions() {
       <div className="mt-6">
         <input
           type="text"
-          placeholder="Search by title or skills..."
+          placeholder="Search by title, company, or skills..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
@@ -88,6 +124,9 @@ function JobDescriptions() {
                         Title
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Company
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Required Skills
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -96,39 +135,47 @@ function JobDescriptions() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredJobs.map((job) => (
-                      <tr key={job.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">{job.title}</div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex flex-wrap gap-1">
-                            {job.requiredSkills && job.requiredSkills.length > 0 ? (
-                              <>
-                                {job.requiredSkills.slice(0, 3).map((skill, index) => (
-                                  <span
-                                    key={index}
-                                    className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800"
-                                  >
-                                    {skill}
-                                  </span>
-                                ))}
-                                {job.requiredSkills.length > 3 && (
-                                  <span className="text-xs text-gray-500">
-                                    +{job.requiredSkills.length - 3} more
-                                  </span>
-                                )}
-                              </>
-                            ) : (
-                              <span className="text-xs text-gray-500">No skills listed</span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {formatDistanceToNow(new Date(job.createdAt), { addSuffix: true })}
-                        </td>
-                      </tr>
-                    ))}
+                    {filteredJobs.map((job) => {
+                      // Handle both old and new skill structures
+                      const skills = job.requiredSkills || job.skills?.required || [];
+                      
+                      return (
+                        <tr key={job.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900">{job.title}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-500">{job.company || 'Not specified'}</div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex flex-wrap gap-1">
+                              {skills.length > 0 ? (
+                                <>
+                                  {skills.slice(0, 3).map((skill, index) => (
+                                    <span
+                                      key={index}
+                                      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800"
+                                    >
+                                      {skill}
+                                    </span>
+                                  ))}
+                                  {skills.length > 3 && (
+                                    <span className="text-xs text-gray-500">
+                                      +{skills.length - 3} more
+                                    </span>
+                                  )}
+                                </>
+                              ) : (
+                                <span className="text-xs text-gray-500">No skills listed</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {formatDistanceToNow(new Date(job.createdAt), { addSuffix: true })}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

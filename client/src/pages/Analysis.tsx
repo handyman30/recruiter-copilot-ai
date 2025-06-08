@@ -16,8 +16,21 @@ function Analysis() {
     queryKey: ['analysis', candidateId, jobId],
     queryFn: async () => {
       if (!user) {
-        // Demo mode - get from localStorage
-        const demoData = JSON.parse(localStorage.getItem('demo_recruiter_data') || '{}');
+        // Demo mode - get from session-specific localStorage
+        const getSessionId = () => {
+          let sessionId = sessionStorage.getItem('recruiter_session_id');
+          if (!sessionId) {
+            sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            sessionStorage.setItem('recruiter_session_id', sessionId);
+          }
+          return sessionId;
+        };
+        
+        const getSessionStorageKey = () => {
+          return `demo_recruiter_data_${getSessionId()}`;
+        };
+        
+        const demoData = JSON.parse(localStorage.getItem(getSessionStorageKey()) || '{}');
         const analyses = demoData.analyses || [];
         const analysis = analyses.find((a: any) => 
           a.candidateId === candidateId && a.jobId === jobId

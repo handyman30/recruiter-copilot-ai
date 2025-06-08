@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { setUserId, clearUserId, trackEvent } from '../utils/analytics';
 
 interface User {
   id: string;
@@ -28,6 +29,17 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
+// Helper function to clear demo data when user authenticates
+function clearDemoData() {
+  // Get session ID
+  const sessionId = sessionStorage.getItem('recruiter_session_id');
+  if (sessionId) {
+    const demoKey = `demo_recruiter_data_${sessionId}`;
+    localStorage.removeItem(demoKey);
+    console.log('🧹 Cleared demo data for authenticated user');
+  }
+}
+
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -49,18 +61,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
         .then(data => {
           if (data.user) {
             setUser(data.user);
+            // Set user ID in analytics
+            setUserId(data.user.id);
+            // Clear demo data since user is authenticated
+            clearDemoData();
           } else {
             localStorage.removeItem('token');
+            clearUserId();
           }
         })
         .catch(() => {
           localStorage.removeItem('token');
+          clearUserId();
         })
         .finally(() => {
           setIsLoading(false);
         });
     } else {
       setIsLoading(false);
+      clearUserId();
     }
   }, [API_BASE]);
 
@@ -81,6 +100,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     localStorage.setItem('token', data.token);
     setUser(data.user);
+    
+    // Set user ID in analytics
+    setUserId(data.user.id);
+    
+    // Track login event
+    trackEvent('user_login', { 
+      userId: data.user.id, 
+      email: data.user.email 
+    });
+    
+    // Clear demo data since user is now authenticated
+    clearDemoData();
   };
 
   const signup = async (email: string, password: string, name?: string) => {
@@ -100,11 +131,30 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     localStorage.setItem('token', data.token);
     setUser(data.user);
+    
+    // Set user ID in analytics
+    setUserId(data.user.id);
+    
+    // Track signup event
+    trackEvent('user_signup', { 
+      userId: data.user.id, 
+      email: data.user.email,
+      name: data.user.name 
+    });
+    
+    // Clear demo data since user is now authenticated
+    clearDemoData();
   };
 
   const logout = () => {
     localStorage.removeItem('token');
     setUser(null);
+    
+    // Clear user ID from analytics
+    clearUserId();
+    
+    // Track logout event
+    trackEvent('user_logout');
   };
 
   return (

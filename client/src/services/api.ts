@@ -47,11 +47,26 @@ api.interceptors.response.use(
   }
 );
 
-// Demo mode localStorage helpers
+// Demo mode localStorage helpers - make it session-specific for privacy
 const DEMO_STORAGE_KEY = 'demo_recruiter_data';
 
+// Generate a unique session ID for this tab/session
+function getSessionId() {
+  let sessionId = sessionStorage.getItem('recruiter_session_id');
+  if (!sessionId) {
+    sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    sessionStorage.setItem('recruiter_session_id', sessionId);
+  }
+  return sessionId;
+}
+
+// Use session-specific storage key
+function getSessionStorageKey() {
+  return `${DEMO_STORAGE_KEY}_${getSessionId()}`;
+}
+
 function getDemoData() {
-  const stored = localStorage.getItem(DEMO_STORAGE_KEY);
+  const stored = localStorage.getItem(getSessionStorageKey());
   if (stored) {
     return JSON.parse(stored);
   }
@@ -110,7 +125,7 @@ function getDemoData() {
 }
 
 function saveDemoData(data: any) {
-  localStorage.setItem(DEMO_STORAGE_KEY, JSON.stringify(data));
+  localStorage.setItem(getSessionStorageKey(), JSON.stringify(data));
 }
 
 function generateDemoUpload(file: File, type: 'job' | 'candidate') {

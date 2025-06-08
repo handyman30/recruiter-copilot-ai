@@ -1,4 +1,9 @@
 // Analytics tracking for RecruiterCopilot.ai
+import mixpanel from 'mixpanel-browser';
+
+// Initialize Mixpanel with your project token
+mixpanel.init('839185b12bce4c278ad6b10c22aa14a8');
+
 interface AnalyticsEvent {
   name: string;
   properties?: Record<string, any>;
@@ -15,11 +20,10 @@ class Analytics {
   constructor() {
     this.sessionId = this.generateSessionId();
     this.loadStoredEvents();
-    this.setupPageTracking();
   }
 
   private generateSessionId(): string {
-    return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
   }
 
   private loadStoredEvents() {
@@ -41,29 +45,35 @@ class Analytics {
     }
   }
 
-  private setupPageTracking() {
-    // Track page views
-    this.track('page_view', {
-      url: window.location.href,
-      path: window.location.pathname,
-      referrer: document.referrer,
-      userAgent: navigator.userAgent,
-    });
-
-    // Track time on page
-    let startTime = Date.now();
-    window.addEventListener('beforeunload', () => {
-      const timeOnPage = Date.now() - startTime;
-      this.track('page_exit', {
-        timeOnPage,
-        url: window.location.href,
-      });
-    });
+  setUserId(userId: string) {
+    this.userId = userId;
+    // Identify user in Mixpanel
+    mixpanel.identify(userId);
   }
 
-  setUser(userId: string) {
-    this.userId = userId;
-    this.track('user_login', { userId });
+  clearUserId() {
+    this.userId = undefined;
+    // Reset Mixpanel identity
+    mixpanel.reset();
+  }
+
+  private sendToAnalyticsService(event: AnalyticsEvent) {
+    try {
+      // Send to Mixpanel
+      mixpanel.track(event.name, {
+        ...event.properties,
+        sessionId: event.sessionId,
+        userId: event.userId,
+        timestamp: event.timestamp
+      });
+      
+      // Log in development
+      if (process.env.NODE_ENV === 'development') {
+        console.log('📊 Analytics Event:', event);
+      }
+    } catch (error) {
+      console.error('Failed to send analytics event:', error);
+    }
   }
 
   track(eventName: string, properties: Record<string, any> = {}) {
@@ -85,79 +95,46 @@ class Analytics {
     this.events.push(event);
     this.saveEvents();
     
-    // Send to analytics service (implement based on your choice)
+    // Send to Mixpanel
     this.sendToAnalyticsService(event);
-    
-    // Log analytics events
-    console.log('📊 Analytics:', event);
   }
 
-  private async sendToAnalyticsService(event: AnalyticsEvent) {
-    try {
-      // You can replace this with your analytics service (GA, Mixpanel, etc.)
-      await fetch('/api/analytics', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(event),
-      }).catch(() => {
-        // Silently fail if no analytics endpoint
-      });
-    } catch (error) {
-      // Silently handle analytics errors
-    }
+  getEvents(): AnalyticsEvent[] {
+    return [...this.events];
   }
 
-  // Specific tracking methods for key events
-  trackFeatureUsage(feature: string, details: Record<string, any> = {}) {
-    this.track('feature_used', {
-      feature,
-      ...details,
+  getSessionId(): string {
+    return this.sessionId;
+  }
+
+  // Track specific event types
+  trackPageView(path: string) {
+    this.track('page_view', { 
+      path,
+      url: window.location.href,
+      referrer: document.referrer,
+      userAgent: navigator.userAgent
     });
+  }
+
+  trackFeatureUsed(feature: string, properties?: Record<string, any>) {
+    this.track('feature_used', { feature, ...properties });
+  }
+
+  trackError(error: string, context?: Record<string, any>) {
+    this.track('error', { error, context });
   }
 
   trackConversion(type: string, value?: number) {
-    this.track('conversion', {
-      type,
-      value,
-      conversionPath: this.getConversionPath(),
-    });
-  }
-
-  trackError(error: string, context: Record<string, any> = {}) {
-    this.track('error', {
-      error,
-      ...context,
-    });
-  }
-
-  trackTiming(action: string, duration: number, details: Record<string, any> = {}) {
-    this.track('timing', {
-      action,
-      duration,
-      ...details,
-    });
-  }
-
-  private getConversionPath(): string[] {
-    return this.events
-      .filter(e => ['page_view', 'feature_used', 'demo_action'].includes(e.name))
-      .map(e => e.name)
-      .slice(-10); // Last 10 actions
-  }
-
-  // Get analytics data for dashboard
-  getAnalyticsData() {
-    return {
-      totalEvents: this.events.length,
-      sessionId: this.sessionId,
-      events: this.events,
-      userJourney: this.getConversionPath(),
-    };
+    this.track('conversion', { type, value });
   }
 }
 
-// Create global analytics instance
-export const analytics = new Analytics();
+// Global analytics instance
+const analytics = new Analytics();
+
+// Export the instance and convenience functions
+export { analytics };
 
 // Convenience functions for common tracking
 export const trackEvent = (name: string, properties?: Record<string, any>) => {
@@ -168,25 +145,38 @@ export const trackDemo = (action: string, details?: Record<string, any>) => {
   analytics.track('demo_action', { action, ...details });
 };
 
-export const trackUpload = (type: 'job' | 'candidate', success: boolean, details?: Record<string, any>) => {
-  analytics.trackFeatureUsage('file_upload', { type, success, ...details });
+export const trackPageView = (path: string) => {
+  analytics.trackPageView(path);
 };
 
-export const trackAnalysis = (matchPercentage: number, candidateId: string, jobId: string) => {
-  analytics.trackFeatureUsage('ai_analysis', { 
-    matchPercentage, 
-    candidateId, 
-    jobId,
-    matchCategory: matchPercentage >= 80 ? 'high' : matchPercentage >= 60 ? 'medium' : 'low'
-  });
+export const trackFeatureUsed = (feature: string, properties?: Record<string, any>) => {
+  analytics.trackFeatureUsed(feature, properties);
 };
 
-export const trackSignupIntent = (trigger: 'exit_intent' | 'save_button' | 'timer' | 'manual' | 'page_exit') => {
+export const trackError = (error: string, context?: Record<string, any>) => {
+  analytics.trackError(error, context);
+};
+
+export const trackConversion = (type: string, value?: number) => {
+  analytics.trackConversion(type, value);
+};
+
+export const trackSignupIntent = (trigger: string) => {
   analytics.track('signup_intent', { trigger });
 };
 
-export const trackConversion = (type: 'signup' | 'login', _method?: string) => {
-  analytics.trackConversion(type, 1);
+export const trackAnalysisCompleted = (matchPercentage: number, trigger: string, mode: string) => {
+  analytics.track('analysis_completed', { matchPercentage, trigger, mode });
 };
 
-export default analytics; 
+export const trackAnalysisFailed = (error: string, mode: string) => {
+  analytics.track('analysis_failed', { error, mode });
+};
+
+export const setUserId = (userId: string) => {
+  analytics.setUserId(userId);
+};
+
+export const clearUserId = () => {
+  analytics.clearUserId();
+}; 

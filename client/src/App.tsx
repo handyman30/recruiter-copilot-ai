@@ -10,6 +10,7 @@ import Dashboard from './pages/Dashboard';
 import JobDescriptions from './pages/JobDescriptions';
 import Candidates from './pages/Candidates';
 import Analysis from './pages/Analysis';
+import { AnalyticsDashboard } from './pages/Analytics';
 
 function DemoBanner({ onSignUp }: { onSignUp: () => void }) {
   const [isVisible, setIsVisible] = useState(true);
@@ -212,6 +213,7 @@ function AppContent() {
           <Route path="jobs" element={<JobDescriptions />} />
           <Route path="candidates" element={<Candidates />} />
           <Route path="analysis/:candidateId/:jobId" element={<Analysis />} />
+          <Route path="analytics" element={<AnalyticsDashboard />} />
         </Route>
       </Routes>
     </div>
