@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { SessionManager, isRateLimitError, getRateLimitMessage } from '../utils/session';
 
 const api = axios.create({
   baseURL: window.location.hostname === 'localhost' 
@@ -10,16 +9,12 @@ const api = axios.create({
   },
 });
 
-// Add auth token and session headers to all requests
+// Add auth token to all requests
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-    } else {
-      // For demo users, add session ID header
-      const sessionId = SessionManager.getSessionId();
-      config.headers['x-session-id'] = sessionId;
     }
     return config;
   },
@@ -28,26 +23,14 @@ api.interceptors.request.use(
   }
 );
 
-// Handle rate limiting, auth errors and connection errors for demo mode
+// Handle auth errors and connection errors for demo mode
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     const token = localStorage.getItem('token');
     
-    // Handle rate limiting errors first
-    if (error.response?.status === 429) {
-      const rateLimitError = error.response.data;
-      if (isRateLimitError(rateLimitError)) {
-        // Create a user-friendly error with the rate limit info
-        const friendlyError = new Error(getRateLimitMessage(rateLimitError));
-        (friendlyError as any).rateLimitInfo = rateLimitError;
-        (friendlyError as any).isRateLimit = true;
-        return Promise.reject(friendlyError);
-      }
-    }
-    
-    // If no token (demo mode), return mock data for connection errors only
-    if (!token && (error.code === 'ECONNREFUSED' || error.code === 'ERR_NETWORK')) {
+    // If no token (demo mode), return mock data for any error
+    if (!token) {
       console.log('Demo mode: returning mock data for', error.config?.url);
       return Promise.resolve({
         data: getDemoResponse(error.config?.url, error.config?.method)
@@ -67,6 +50,14 @@ api.interceptors.response.use(
 // Demo mode localStorage helpers - make it session-specific for privacy
 const DEMO_STORAGE_KEY = 'demo_recruiter_data';
 
+// Demo limits configuration
+const DEMO_LIMITS = {
+  MAX_ANALYSES: 3,
+  MAX_JOBS: 2, 
+  MAX_CANDIDATES: 3,
+  SESSION_DURATION: 2 * 60 * 60 * 1000, // 2 hours in milliseconds
+};
+
 // Generate a unique session ID for this tab/session
 function getSessionId() {
   let sessionId = sessionStorage.getItem('recruiter_session_id');
@@ -82,7 +73,79 @@ function getSessionStorageKey() {
   return `${DEMO_STORAGE_KEY}_${getSessionId()}`;
 }
 
+// Check if demo session has expired
+function isDemoSessionExpired() {
+  const sessionStart = sessionStorage.getItem('demo_session_start');
+  if (!sessionStart) {
+    // First time - set session start time
+    sessionStorage.setItem('demo_session_start', Date.now().toString());
+    return false;
+  }
+  
+  const elapsed = Date.now() - parseInt(sessionStart);
+  return elapsed > DEMO_LIMITS.SESSION_DURATION;
+}
+
+// Clear demo data if session expired
+function clearExpiredDemoData() {
+  if (isDemoSessionExpired()) {
+    localStorage.removeItem(getSessionStorageKey());
+    sessionStorage.removeItem('demo_session_start');
+    sessionStorage.setItem('demo_session_start', Date.now().toString());
+    return true;
+  }
+  return false;
+}
+
+// Check demo limits
+function checkDemoLimits(type: 'analysis' | 'job' | 'candidate') {
+  clearExpiredDemoData();
+  const data = getDemoData();
+  
+  switch (type) {
+    case 'analysis':
+      return data.analyses.length < DEMO_LIMITS.MAX_ANALYSES;
+    case 'job':
+      return data.jobs.length < DEMO_LIMITS.MAX_JOBS;
+    case 'candidate':
+      return data.candidates.length < DEMO_LIMITS.MAX_CANDIDATES;
+    default:
+      return false;
+  }
+}
+
+// Get demo limits info for UI
+export function getDemoLimitsInfo() {
+  clearExpiredDemoData();
+  const data = getDemoData();
+  return {
+    analyses: {
+      used: data.analyses.length,
+      max: DEMO_LIMITS.MAX_ANALYSES,
+      remaining: Math.max(0, DEMO_LIMITS.MAX_ANALYSES - data.analyses.length)
+    },
+    jobs: {
+      used: data.jobs.length,
+      max: DEMO_LIMITS.MAX_JOBS,
+      remaining: Math.max(0, DEMO_LIMITS.MAX_JOBS - data.jobs.length)
+    },
+    candidates: {
+      used: data.candidates.length,
+      max: DEMO_LIMITS.MAX_CANDIDATES,
+      remaining: Math.max(0, DEMO_LIMITS.MAX_CANDIDATES - data.candidates.length)
+    },
+    sessionTimeRemaining: () => {
+      const sessionStart = sessionStorage.getItem('demo_session_start');
+      if (!sessionStart) return DEMO_LIMITS.SESSION_DURATION;
+      const elapsed = Date.now() - parseInt(sessionStart);
+      return Math.max(0, DEMO_LIMITS.SESSION_DURATION - elapsed);
+    }
+  };
+}
+
 function getDemoData() {
+  clearExpiredDemoData();
+  
   const stored = localStorage.getItem(getSessionStorageKey());
   if (stored) {
     return JSON.parse(stored);
@@ -96,13 +159,6 @@ function getDemoData() {
         title: 'Senior React Developer',
         company: 'TechCorp Inc.',
         skills: { required: ['React', 'TypeScript', 'Node.js'], niceToHave: ['GraphQL'] },
-        createdAt: new Date().toISOString()
-      },
-      {
-        id: 'demo-job-2', 
-        title: 'Full Stack Engineer',
-        company: 'StartupXYZ',
-        skills: { required: ['JavaScript', 'Python', 'PostgreSQL'], niceToHave: ['Docker'] },
         createdAt: new Date().toISOString()
       }
     ],
@@ -126,18 +182,7 @@ function getDemoData() {
         createdAt: new Date().toISOString()
       }
     ],
-    analyses: [
-      {
-        id: 'demo-analysis-1',
-        candidateId: 'demo-candidate-1',
-        jobId: 'demo-job-1', 
-        matchPercentage: 92,
-        topSkills: ['React', 'TypeScript', 'Node.js'],
-        missingSkills: [],
-        generatedMessage: "Hi Alex! I came across your profile and was impressed by your React and TypeScript expertise. We have an exciting Senior React Developer position at TechCorp that seems like a perfect match for your skillset. Would you be interested in learning more?",
-        createdAt: new Date().toISOString()
-      }
-    ]
+    analyses: []
   };
 }
 
@@ -146,6 +191,11 @@ function saveDemoData(data: any) {
 }
 
 function generateDemoUpload(file: File, type: 'job' | 'candidate') {
+  // Check demo limits before allowing upload
+  if (!checkDemoLimits(type)) {
+    throw new Error(`Demo limit reached! You can only upload ${type === 'job' ? DEMO_LIMITS.MAX_JOBS + ' job descriptions' : DEMO_LIMITS.MAX_CANDIDATES + ' candidates'} in demo mode. Sign up for unlimited uploads!`);
+  }
+
   const data = getDemoData();
   const id = `demo-${type}-${Date.now()}`;
   const fileName = file.name.replace(/\.[^/.]+$/, "").toLowerCase();
@@ -251,6 +301,11 @@ function generateDemoUpload(file: File, type: 'job' | 'candidate') {
 }
 
 function generateDemoAnalysis(candidateId: string, jobId: string) {
+  // Check demo limits before allowing analysis
+  if (!checkDemoLimits('analysis')) {
+    throw new Error(`Demo limit reached! You can only run ${DEMO_LIMITS.MAX_ANALYSES} analyses in demo mode. Sign up for unlimited AI-powered analyses!`);
+  }
+
   const data = getDemoData();
   const candidate = data.candidates.find((c: any) => c.id === candidateId);
   const job = data.jobs.find((j: any) => j.id === jobId);
@@ -418,16 +473,8 @@ export const analysisApi = {
       return generateDemoAnalysis(candidateId, jobId);
     }
     
-    try {
-      const response = await api.post(`/analysis/${candidateId}/${jobId}`);
-      return response.data;
-    } catch (error: any) {
-      // Handle rate limiting errors specifically for analysis
-      if (error.isRateLimit) {
-        throw error; // Re-throw rate limit errors to be handled by UI
-      }
-      throw error;
-    }
+    const response = await api.post(`/analysis/${candidateId}/${jobId}`);
+    return response.data;
   },
   
   get: async (candidateId: string, jobId: string) => {

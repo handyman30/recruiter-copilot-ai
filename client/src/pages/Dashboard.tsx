@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
-import { FileText, Users, TrendingUp, ArrowRight, Loader2, Zap, AlertCircle, CheckCircle2, Clock, ExternalLink } from 'lucide-react';
+import { FileText, Users, TrendingUp, ArrowRight, Loader2, Zap, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { trackEvent, trackFeatureUsed, trackAnalysisCompleted, trackAnalysisFailed } from '../utils/analytics';
 import { useAuth } from '../contexts/AuthContext';
 import FileUpload from '../components/FileUpload';
 import UsageTracker from '../components/UsageTracker';
+import DemoLimitsTracker from '../components/DemoLimitsTracker';
 import { jobDescriptionApi, candidateApi, analysisApi } from '../services/api';
 import { JobDescription, Candidate, Analysis } from '../types';
 
@@ -17,23 +18,7 @@ function Dashboard() {
   const [selectedCandidate, setSelectedCandidate] = useState<string>('');
   const [recentJobUpload, setRecentJobUpload] = useState<string | null>(null);
   const [recentCandidateUpload, setRecentCandidateUpload] = useState<string | null>(null);
-  const [rateLimitError, setRateLimitError] = useState<string | null>(null);
-  const [countdown, setCountdown] = useState<number>(0);
-
-  // Handle countdown for rate limiting
-  const startCountdown = (seconds: number) => {
-    setCountdown(seconds);
-    const interval = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          setRateLimitError(null);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-  };
+  const [errorMessage, setErrorMessage] = useState<string>('');
 
   // Queries
   const { data: jobs = [] } = useQuery({
@@ -65,14 +50,17 @@ function Dashboard() {
       queryClient.invalidateQueries({ queryKey: ['jobs', user?.id] });
       setRecentJobUpload(data.id);
       setSelectedJob(data.id);
+      setErrorMessage('');
       console.log('📌 Set recent job upload:', data.id);
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('❌ Job upload failed:', error);
+      const message = error.message || 'Failed to upload job description';
+      setErrorMessage(message);
       trackFeatureUsed('file_upload', { 
         type: 'job', 
         success: false, 
-        error: error.message 
+        error: message 
       });
     },
   });
@@ -90,15 +78,18 @@ function Dashboard() {
       queryClient.invalidateQueries({ queryKey: ['candidates', user?.id] });
       setRecentCandidateUpload(data.id);
       setSelectedCandidate(data.id);
+      setErrorMessage('');
       console.log('📌 Set recent candidate upload:', data.id);
       console.log('🎯 Ready to match - Job:', recentJobUpload, 'Candidate:', data.id);
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('❌ Candidate upload failed:', error);
+      const message = error.message || 'Failed to upload candidate resume';
+      setErrorMessage(message);
       trackFeatureUsed('file_upload', { 
         type: 'candidate', 
         success: false, 
-        error: error.message 
+        error: message 
       });
     },
   });
@@ -107,9 +98,6 @@ function Dashboard() {
     mutationFn: ({ candidateId, jobId }: { candidateId: string; jobId: string }) => 
       analysisApi.analyze(candidateId, jobId),
     onSuccess: (data) => {
-      setRateLimitError(null);
-      setCountdown(0);
-      
       trackFeatureUsed('ai_analysis', {
         matchPercentage: data.matchPercentage,
         candidateId: data.candidateId,
@@ -127,34 +115,15 @@ function Dashboard() {
       setSelectedCandidate('');
       setRecentJobUpload(null);
       setRecentCandidateUpload(null);
+      setErrorMessage('');
       
       // Navigate to the analysis page
       navigate(`/analysis/${data.candidateId}/${data.jobId}`);
     },
     onError: (error: any) => {
-      console.error('Analysis error:', error);
-      
-      if (error.isRateLimit && error.rateLimitInfo) {
-        const rateLimitInfo = error.rateLimitInfo;
-        setRateLimitError(error.message);
-        
-        // Start countdown if there's a wait time
-        if (rateLimitInfo.waitTime) {
-          startCountdown(rateLimitInfo.waitTime);
-        }
-        
-        // Track rate limit event
-        trackEvent('rate_limit_hit', {
-          code: rateLimitInfo.code,
-          limit: rateLimitInfo.limit,
-          waitTime: rateLimitInfo.waitTime,
-          userType: user ? 'authenticated' : 'demo'
-        });
-      } else {
-        setRateLimitError('Analysis failed. Please try again.');
-      }
-      
-      trackAnalysisFailed(error.message, user ? 'authenticated' : 'demo');
+      const message = error.message || 'Failed to run analysis';
+      setErrorMessage(message);
+      trackAnalysisFailed(message, user ? 'authenticated' : 'demo');
     },
   });
 
@@ -196,8 +165,38 @@ function Dashboard() {
         </p>
       </div>
 
-      {/* Usage Tracker for authenticated users */}
-      {user && <UsageTracker />}
+      {/* Usage Tracker for authenticated users, Demo Limits for demo users */}
+      {user ? <UsageTracker /> : <DemoLimitsTracker />}
+
+      {/* Error Message */}
+      {errorMessage && (
+        <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4">
+          <div className="flex items-start space-x-3">
+            <AlertCircle className="h-5 w-5 text-red-500 mt-0.5" />
+            <div className="flex-1">
+              <h3 className="text-sm font-medium text-red-800">
+                {errorMessage.includes('limit') ? 'Demo Limit Reached' : 'Upload Failed'}
+              </h3>
+              <p className="text-sm text-red-700 mt-1">{errorMessage}</p>
+              {errorMessage.includes('limit') && (
+                <Link
+                  to="/pricing"
+                  className="inline-flex items-center mt-2 text-sm font-medium text-red-600 hover:text-red-700"
+                >
+                  Upgrade to Pro for unlimited access
+                  <ArrowRight className="h-4 w-4 ml-1" />
+                </Link>
+              )}
+            </div>
+            <button
+              onClick={() => setErrorMessage('')}
+              className="text-red-400 hover:text-red-600"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Getting Started Banner - Shows when user has no data */}
       {!hasJobs && !hasCandidates && (
@@ -264,48 +263,8 @@ function Dashboard() {
         </div>
       )}
 
-      {/* Rate Limit Error Banner */}
-      {rateLimitError && (
-        <div className="bg-red-50 border-2 border-red-200 rounded-xl p-6">
-          <div className="flex items-start space-x-4">
-            <AlertCircle className="h-6 w-6 text-red-500 mt-0.5" />
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold text-red-900">
-                {countdown > 0 ? 'Rate Limit Active' : 'Demo Limit Reached'}
-              </h3>
-              <p className="text-red-700 mt-1">
-                {rateLimitError}
-              </p>
-              {countdown > 0 && (
-                <div className="flex items-center mt-3 space-x-2">
-                  <Clock className="h-4 w-4 text-red-600" />
-                  <span className="text-red-700 font-mono">
-                    Please wait {countdown} seconds before trying again
-                  </span>
-                </div>
-              )}
-              <div className="flex items-center mt-4 space-x-3">
-                <button
-                  onClick={() => navigate('/pricing')}
-                  className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors"
-                >
-                  <ExternalLink className="h-4 w-4 mr-2" />
-                  Upgrade for Unlimited
-                </button>
-                <button
-                  onClick={() => setRateLimitError(null)}
-                  className="text-red-600 hover:text-red-800 font-medium"
-                >
-                  Dismiss
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Ready to Match Banner - Show when we have both types of uploads */}
-      {canAnalyze && (recentJobUpload && recentCandidateUpload) && !rateLimitError && (
+      {canAnalyze && (recentJobUpload && recentCandidateUpload) && (
         <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-8 text-center animate-scale-up">
           <Zap className="h-12 w-12 text-green-500 mx-auto mb-4" />
           <h3 className="text-2xl font-bold text-green-900 mb-2">
@@ -328,18 +287,13 @@ function Dashboard() {
                 analyzeMutation.mutate({ candidateId, jobId });
               }
             }}
-            disabled={analyzeMutation.isPending || countdown > 0}
+            disabled={analyzeMutation.isPending}
             className="inline-flex items-center px-8 py-4 bg-green-600 text-white rounded-xl font-semibold text-lg hover:bg-green-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
           >
             {analyzeMutation.isPending ? (
               <>
                 <Loader2 className="animate-spin h-6 w-6 mr-3" />
                 Analyzing Match...
-              </>
-            ) : countdown > 0 ? (
-              <>
-                <Clock className="h-6 w-6 mr-3" />
-                Wait {countdown}s
               </>
             ) : (
               <>
@@ -429,18 +383,13 @@ function Dashboard() {
           </div>
           <button
             onClick={handleAnalyze}
-            disabled={!selectedJob || !selectedCandidate || analyzeMutation.isPending || countdown > 0}
+            disabled={!selectedJob || !selectedCandidate || analyzeMutation.isPending}
             className="mt-4 btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {analyzeMutation.isPending ? (
               <>
                 <Loader2 className="animate-spin h-4 w-4 mr-2 inline" />
                 Analyzing...
-              </>
-            ) : countdown > 0 ? (
-              <>
-                <Clock className="h-4 w-4 mr-2 inline" />
-                Wait {countdown}s
               </>
             ) : (
               'Analyze Match'
@@ -516,7 +465,7 @@ function Dashboard() {
               Processing job description...
             </div>
           )}
-          {uploadJobMutation.isSuccess && (
+          {uploadJobMutation.isSuccess && !errorMessage && (
             <div className="mt-4 text-sm text-green-600">
               ✓ Job description uploaded successfully!
             </div>
@@ -539,7 +488,7 @@ function Dashboard() {
               Processing resume...
             </div>
           )}
-          {uploadCandidateMutation.isSuccess && (
+          {uploadCandidateMutation.isSuccess && !errorMessage && (
             <div className="mt-4 text-sm text-green-600">
               ✓ Resume uploaded successfully!
             </div>

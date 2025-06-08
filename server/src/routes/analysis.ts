@@ -2,92 +2,17 @@ import { Router } from 'express';
 import { prisma } from '../utils/prisma';
 import { analyzeMatch, generateFollowUpMessage } from '../utils/ai-service';
 import { authMiddleware } from '../middleware/auth';
-import { demoRateLimit } from '../middleware/rateLimiting';
 
 const router = Router();
 
-// Make auth optional for demo users (they'll be rate limited)
-const optionalAuth = (req: any, res: any, next: any) => {
-  const sessionId = req.headers['x-session-id'];
-  if (sessionId && !req.headers.authorization) {
-    // Demo user, skip auth
-    req.userId = undefined;
-    return next();
-  }
-  // Regular auth for logged-in users
-  return authMiddleware(req, res, next);
-};
-
-// Apply optional auth middleware to all routes
-router.use(optionalAuth);
+// Apply auth middleware to all routes
+router.use(authMiddleware);
 
 // Analyze candidate-job match
-router.post('/:candidateId/:jobId', demoRateLimit, async (req, res) => {
+router.post('/:candidateId/:jobId', async (req, res) => {
   try {
     const { candidateId, jobId } = req.params;
-    const userId = req.user?.userId || req.userId;
-    const isDemo = !userId;
-    
-    if (isDemo) {
-      // For demo users, generate demo analysis
-      const matchPercentage = Math.floor(Math.random() * 40) + 60; // 60-100%
-      
-      const topSkills = [
-        'JavaScript', 'React', 'Node.js', 'TypeScript', 'Python',
-        'AWS', 'Docker', 'Git', 'SQL', 'REST APIs'
-      ].sort(() => 0.5 - Math.random()).slice(0, 3);
-      
-      const missingSkills = [
-        'Kubernetes', 'GraphQL', 'Redis', 'MongoDB', 'Vue.js',
-        'Angular', 'DevOps', 'CI/CD', 'Microservices'
-      ].sort(() => 0.5 - Math.random()).slice(0, 2);
-      
-      let messageTemplate: string;
-      if (matchPercentage >= 80) {
-        messageTemplate = 'high_match';
-      } else if (matchPercentage >= 60) {
-        messageTemplate = 'mid_match';
-      } else {
-        messageTemplate = 'low_match';
-      }
-      
-      const generatedMessage = generateFollowUpMessage(
-        matchPercentage,
-        'Demo Candidate',
-        topSkills[0],
-        missingSkills[0]
-      );
-      
-      // Return demo analysis
-      const demoAnalysis = {
-        id: `demo-${candidateId}-${jobId}`,
-        candidateId,
-        jobId,
-        matchPercentage,
-        topSkills,
-        missingSkills,
-        generatedMessage,
-        messageTemplate,
-        isDemo: true,
-        createdAt: new Date().toISOString(),
-        candidate: {
-          id: candidateId,
-          name: 'Demo Candidate',
-          email: 'demo@example.com',
-          location: 'San Francisco, CA',
-          seniority: 'Senior',
-          techStack: topSkills
-        },
-        job: {
-          id: jobId,
-          title: 'Demo Job Position',
-          company: 'Demo Company',
-          skills: [...topSkills, ...missingSkills]
-        }
-      };
-      
-      return res.json(demoAnalysis);
-    }
+    const userId = req.user!.userId;
     
     // Check if analysis already exists
     const existingAnalysis = await prisma.analysis.findFirst({
@@ -224,12 +149,7 @@ router.post('/:candidateId/:jobId', demoRateLimit, async (req, res) => {
 router.get('/:candidateId/:jobId', async (req, res) => {
   try {
     const { candidateId, jobId } = req.params;
-    const userId = req.user?.userId || req.userId;
-    
-    // Demo users don't have saved analyses
-    if (!userId) {
-      return res.status(404).json({ error: 'Analysis not found' });
-    }
+    const userId = req.user!.userId;
     
     const analysis = await prisma.analysis.findFirst({
       where: {
@@ -257,12 +177,7 @@ router.get('/:candidateId/:jobId', async (req, res) => {
 // Regenerate message for an analysis (user-specific)
 router.post('/:analysisId/regenerate-message', async (req, res) => {
   try {
-    const userId = req.user?.userId || req.userId;
-    
-    // Demo users can't regenerate messages
-    if (!userId) {
-      return res.status(404).json({ error: 'Analysis not found' });
-    }
+    const userId = req.user!.userId;
     
     const analysis = await prisma.analysis.findFirst({
       where: { 
@@ -300,12 +215,7 @@ router.post('/:analysisId/regenerate-message', async (req, res) => {
 // Get all analyses for the authenticated user
 router.get('/', async (req, res) => {
   try {
-    const userId = req.user?.userId || req.userId;
-    
-    // Demo users don't have saved analyses - return empty array
-    if (!userId) {
-      return res.json([]);
-    }
+    const userId = req.user!.userId;
     
     const analyses = await prisma.analysis.findMany({
       where: { userId },
