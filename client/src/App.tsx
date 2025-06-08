@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Loader2, ArrowRight, Sparkles } from 'lucide-react';
@@ -208,20 +208,18 @@ function AppContent() {
         <DemoBanner onSignUp={() => setShowAuth(true)} />
       )}
       
-      <BrowserRouter>
-        <Routes>
-          <Route path="/auth" element={<AuthForm />} />
-          <Route path="/pricing" element={<PricingPage />} />
-          <Route path="/" element={<Layout />}>
-            <Route index element={<Navigate to="/dashboard" replace />} />
-            <Route path="dashboard" element={<Dashboard />} />
-            <Route path="jobs" element={<JobDescriptions />} />
-            <Route path="candidates" element={<Candidates />} />
-            <Route path="analytics" element={<AnalyticsDashboard />} />
-            <Route path="analysis/:candidateId/:jobId" element={<Analysis />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
+      <Routes>
+        <Route path="/auth" element={<AuthForm />} />
+        <Route path="/pricing" element={<PricingPage />} />
+        <Route path="/" element={<Layout />}>
+          <Route index element={<Navigate to="/dashboard" replace />} />
+          <Route path="dashboard" element={<Dashboard />} />
+          <Route path="jobs" element={<JobDescriptions />} />
+          <Route path="candidates" element={<Candidates />} />
+          <Route path="analytics" element={<AnalyticsDashboard />} />
+          <Route path="analysis/:candidateId/:jobId" element={<Analysis />} />
+        </Route>
+      </Routes>
     </div>
   );
 }
