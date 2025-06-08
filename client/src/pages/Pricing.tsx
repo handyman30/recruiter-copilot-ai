@@ -22,7 +22,6 @@ const loadPayPalScript = (clientId: string): Promise<any> => {
 export const PricingPage: React.FC = () => {
   const { user } = useAuth();
   const [paypalLoaded, setPaypalLoaded] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
 
   const PAYPAL_CLIENT_ID = 'AZZbBDtORoBh0ZRh_UeH3dx83MX0qr9Ss2-9seqJmEIfCwcltFWnMfBTKsx0CaehkeD7l7BjxpRZZLix';
 
@@ -48,7 +47,7 @@ export const PricingPage: React.FC = () => {
           layout: 'vertical',
           label: 'subscribe'
         },
-        createSubscription: function(data: any, actions: any) {
+        createSubscription: function(_data: any, actions: any) {
           trackEvent('paypal_subscription_initiated', {
             plan: 'pro_monthly',
             amount: 10,
@@ -71,7 +70,7 @@ export const PricingPage: React.FC = () => {
             }
           });
         },
-        onApprove: function(data: any, actions: any) {
+        onApprove: function(data: any, _actions: any) {
           trackEvent('paypal_subscription_approved', {
             subscription_id: data.subscriptionID,
             user: user?.id || 'anonymous'
@@ -101,7 +100,7 @@ export const PricingPage: React.FC = () => {
           console.error('PayPal error:', err);
           alert('Payment failed. Please try again.');
         },
-        onCancel: function(data: any) {
+        onCancel: function(_data: any) {
           trackEvent('paypal_subscription_cancelled', {
             user: user?.id || 'anonymous'
           });
