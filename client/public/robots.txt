@@ -1,0 +1,21 @@
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://recruitercopilot.ai/sitemap.xml
+
+# Block access to private areas
+Disallow: /api/
+Disallow: /admin/
+Disallow: /*.json$
+
+# Allow important pages
+Allow: /dashboard
+Allow: /analysis/*
+Allow: /blog/
+Allow: /features/
+Allow: /pricing/
+Allow: /help/
+
+# Crawl delay
+Crawl-delay: 1 
