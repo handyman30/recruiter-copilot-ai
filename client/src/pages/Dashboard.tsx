@@ -20,12 +20,26 @@ function Dashboard() {
   // Queries
   const { data: jobs = [] } = useQuery({
     queryKey: ['jobs'],
-    queryFn: jobDescriptionApi.getAll,
+    queryFn: () => {
+      if (!user) {
+        // Demo mode - get from localStorage
+        const demoData = JSON.parse(localStorage.getItem('demo_recruiter_data') || '{}');
+        return demoData.jobs || [];
+      }
+      return jobDescriptionApi.getAll();
+    },
   });
 
   const { data: candidates = [] } = useQuery({
     queryKey: ['candidates'],
-    queryFn: candidateApi.getAll,
+    queryFn: () => {
+      if (!user) {
+        // Demo mode - get from localStorage
+        const demoData = JSON.parse(localStorage.getItem('demo_recruiter_data') || '{}');
+        return demoData.candidates || [];
+      }
+      return candidateApi.getAll();
+    },
   });
 
   const { data: analyses = [] } = useQuery({
@@ -88,10 +102,42 @@ function Dashboard() {
 
   // Mutations
   const uploadJobMutation = useMutation({
-    mutationFn: jobDescriptionApi.upload,
+    mutationFn: async (file: File) => {
+      if (!user) {
+        // Demo mode - simulate upload and generate fake data
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate processing time
+        
+        const fakeJob = {
+          id: `demo_job_${Date.now()}`,
+          title: file.name.includes('developer') || file.name.includes('engineer') ? 'Senior Software Engineer' : 
+                file.name.includes('manager') ? 'Product Manager' :
+                file.name.includes('design') ? 'UX Designer' : 'Software Developer',
+          company: ['TechCorp', 'InnovateLabs', 'DataFlow Inc', 'CloudFirst', 'DevCo'][Math.floor(Math.random() * 5)],
+          location: ['San Francisco, CA', 'New York, NY', 'Remote', 'Austin, TX', 'Seattle, WA'][Math.floor(Math.random() * 5)],
+          requirements: 'React, TypeScript, Node.js, AWS, PostgreSQL, Agile development, team collaboration',
+          description: 'Exciting opportunity to work with cutting-edge technologies in a fast-paced environment.',
+          createdAt: new Date().toISOString()
+        };
+        
+        // Store in localStorage
+        const demoData = JSON.parse(localStorage.getItem('demo_recruiter_data') || '{}');
+        if (!demoData.jobs) demoData.jobs = [];
+        demoData.jobs.push(fakeJob);
+        localStorage.setItem('demo_recruiter_data', JSON.stringify(demoData));
+        
+        return fakeJob;
+      }
+      
+      return jobDescriptionApi.upload(file);
+    },
     onSuccess: (data) => {
       trackUpload('job', true, { jobId: data.id, title: data.title });
-      queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      if (user) {
+        queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      } else {
+        // For demo mode, invalidate queries to refresh the UI
+        queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      }
       setRecentJobUpload(data.id);
       setSelectedJob(data.id);
     },
@@ -101,10 +147,46 @@ function Dashboard() {
   });
 
   const uploadCandidateMutation = useMutation({
-    mutationFn: candidateApi.upload,
+    mutationFn: async (file: File) => {
+      if (!user) {
+        // Demo mode - simulate upload and generate fake data
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate processing time
+        
+        const firstNames = ['Alex', 'Jordan', 'Taylor', 'Casey', 'Morgan', 'Riley', 'Avery', 'Quinn'];
+        const lastNames = ['Johnson', 'Williams', 'Brown', 'Davis', 'Miller', 'Wilson', 'Moore', 'Taylor'];
+        const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
+        const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+        
+        const fakeCandidate = {
+          id: `demo_candidate_${Date.now()}`,
+          name: `${firstName} ${lastName}`,
+          email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}@email.com`,
+          phone: '+1 (555) ' + Math.floor(Math.random() * 900 + 100) + '-' + Math.floor(Math.random() * 9000 + 1000),
+          location: ['San Francisco, CA', 'New York, NY', 'Los Angeles, CA', 'Austin, TX', 'Seattle, WA'][Math.floor(Math.random() * 5)],
+          experience: Math.floor(Math.random() * 8 + 2) + ' years',
+          skills: ['React', 'TypeScript', 'Node.js', 'Python', 'AWS', 'Docker', 'GraphQL', 'MongoDB'].slice(0, Math.floor(Math.random() * 4 + 3)).join(', '),
+          createdAt: new Date().toISOString()
+        };
+        
+        // Store in localStorage
+        const demoData = JSON.parse(localStorage.getItem('demo_recruiter_data') || '{}');
+        if (!demoData.candidates) demoData.candidates = [];
+        demoData.candidates.push(fakeCandidate);
+        localStorage.setItem('demo_recruiter_data', JSON.stringify(demoData));
+        
+        return fakeCandidate;
+      }
+      
+      return candidateApi.upload(file);
+    },
     onSuccess: (data) => {
       trackUpload('candidate', true, { candidateId: data.id, name: data.name });
-      queryClient.invalidateQueries({ queryKey: ['candidates'] });
+      if (user) {
+        queryClient.invalidateQueries({ queryKey: ['candidates'] });
+      } else {
+        // For demo mode, invalidate queries to refresh the UI
+        queryClient.invalidateQueries({ queryKey: ['candidates'] });
+      }
       setRecentCandidateUpload(data.id);
       setSelectedCandidate(data.id);
     },
@@ -390,8 +472,8 @@ function Dashboard() {
         </div>
       </div>
 
-      {/* Manual Match Section - Only show if user has data but hasn't used auto-match */}
-      {canAnalyze && !(selectedJob && selectedCandidate) && !(recentJobUpload && recentCandidateUpload) && (
+      {/* Manual Match Section - Show whenever we have data, unless auto-prompt is active */}
+      {canAnalyze && !(recentJobUpload && recentCandidateUpload && !selectedJob && !selectedCandidate) && (
         <div className="card">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Match</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -401,7 +483,10 @@ function Dashboard() {
               </label>
               <select
                 value={selectedJob}
-                onChange={(e) => setSelectedJob(e.target.value)}
+                onChange={(e) => {
+                  setSelectedJob(e.target.value);
+                  trackEvent('job_selected_from_dropdown', { jobId: e.target.value, mode: user ? 'authenticated' : 'demo' });
+                }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
               >
                 <option value="">Choose a job...</option>
@@ -411,6 +496,21 @@ function Dashboard() {
                   </option>
                 ))}
               </select>
+              {selectedJob && (
+                <div className="mt-2">
+                  {(() => {
+                    const job = jobs.find((j: JobDescription) => j.id === selectedJob);
+                    return job ? (
+                      <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded">
+                        <strong>{job.title}</strong>
+                        {job.company && <span> at {job.company}</span>}
+                        {job.location && <span> • {job.location}</span>}
+                        <div className="mt-1 line-clamp-2">{job.requirements?.slice(0, 100)}...</div>
+                      </div>
+                    ) : null;
+                  })()}
+                </div>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -418,7 +518,10 @@ function Dashboard() {
               </label>
               <select
                 value={selectedCandidate}
-                onChange={(e) => setSelectedCandidate(e.target.value)}
+                onChange={(e) => {
+                  setSelectedCandidate(e.target.value);
+                  trackEvent('candidate_selected_from_dropdown', { candidateId: e.target.value, mode: user ? 'authenticated' : 'demo' });
+                }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
               >
                 <option value="">Choose a candidate...</option>
@@ -428,6 +531,21 @@ function Dashboard() {
                   </option>
                 ))}
               </select>
+              {selectedCandidate && (
+                <div className="mt-2">
+                  {(() => {
+                    const candidate = candidates.find((c: Candidate) => c.id === selectedCandidate);
+                    return candidate ? (
+                      <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded">
+                        <strong>{candidate.name}</strong>
+                        {candidate.email && <span> • {candidate.email}</span>}
+                        {candidate.location && <span> • {candidate.location}</span>}
+                        {candidate.phone && <div className="mt-1">{candidate.phone}</div>}
+                      </div>
+                    ) : null;
+                  })()}
+                </div>
+              )}
             </div>
           </div>
           <button
