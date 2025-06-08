@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { SessionManager, isRateLimitError, getRateLimitMessage } from '../utils/session';
 
 const api = axios.create({
   baseURL: window.location.hostname === 'localhost' 
@@ -9,12 +10,16 @@ const api = axios.create({
   },
 });
 
-// Add auth token to all requests
+// Add auth token and session headers to all requests
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    } else {
+      // For demo users, add session ID header
+      const sessionId = SessionManager.getSessionId();
+      config.headers['x-session-id'] = sessionId;
     }
     return config;
   },
@@ -23,14 +28,26 @@ api.interceptors.request.use(
   }
 );
 
-// Handle auth errors and connection errors for demo mode
+// Handle rate limiting, auth errors and connection errors for demo mode
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     const token = localStorage.getItem('token');
     
-    // If no token (demo mode), return mock data for any error
-    if (!token) {
+    // Handle rate limiting errors first
+    if (error.response?.status === 429) {
+      const rateLimitError = error.response.data;
+      if (isRateLimitError(rateLimitError)) {
+        // Create a user-friendly error with the rate limit info
+        const friendlyError = new Error(getRateLimitMessage(rateLimitError));
+        (friendlyError as any).rateLimitInfo = rateLimitError;
+        (friendlyError as any).isRateLimit = true;
+        return Promise.reject(friendlyError);
+      }
+    }
+    
+    // If no token (demo mode), return mock data for connection errors only
+    if (!token && (error.code === 'ECONNREFUSED' || error.code === 'ERR_NETWORK')) {
       console.log('Demo mode: returning mock data for', error.config?.url);
       return Promise.resolve({
         data: getDemoResponse(error.config?.url, error.config?.method)
@@ -401,8 +418,16 @@ export const analysisApi = {
       return generateDemoAnalysis(candidateId, jobId);
     }
     
-    const response = await api.post(`/analysis/${candidateId}/${jobId}`);
-    return response.data;
+    try {
+      const response = await api.post(`/analysis/${candidateId}/${jobId}`);
+      return response.data;
+    } catch (error: any) {
+      // Handle rate limiting errors specifically for analysis
+      if (error.isRateLimit) {
+        throw error; // Re-throw rate limit errors to be handled by UI
+      }
+      throw error;
+    }
   },
   
   get: async (candidateId: string, jobId: string) => {
