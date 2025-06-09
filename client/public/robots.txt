@@ -1,21 +1,80 @@
 User-agent: *
 Allow: /
 
-# Sitemap
-Sitemap: https://recruitercopilot.ai/sitemap.xml
-
-# Block access to private areas
-Disallow: /api/
-Disallow: /admin/
-Disallow: /*.json$
-
-# Allow important pages
+# Important pages for indexing
 Allow: /dashboard
-Allow: /analysis/*
-Allow: /blog/
-Allow: /features/
-Allow: /pricing/
-Allow: /help/
+Allow: /pricing
+Allow: /auth
+Allow: /help
+Allow: /about
+Allow: /contact
 
-# Crawl delay
-Crawl-delay: 1 
+# Block admin and internal pages
+Disallow: /admin/
+Disallow: /api/
+Disallow: /_next/
+Disallow: /private/
+Disallow: /.well-known/
+Disallow: /node_modules/
+
+# Block query parameters that don't add value
+Disallow: /*?utm_*
+Disallow: /*?ref=*
+Disallow: /*?source=*
+Disallow: /*?tracking=*
+
+# Allow specific crawl-friendly query parameters
+Allow: /*?q=*
+Allow: /*?search=*
+
+# Sitemap location
+Sitemap: https://recruitercopilot.live/sitemap.xml
+
+# Crawl-delay for polite crawling (1 second)
+Crawl-delay: 1
+
+# Specific rules for major search engines
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 1
+
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 1
+
+User-agent: Slurp
+Allow: /
+Crawl-delay: 2
+
+User-agent: DuckDuckBot
+Allow: /
+Crawl-delay: 1
+
+# Social media crawlers
+User-agent: facebookexternalhit
+Allow: /
+
+User-agent: Twitterbot
+Allow: /
+
+User-agent: LinkedInBot
+Allow: /
+
+# Block bad bots and scrapers
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: MJ12bot
+Disallow: /
+
+User-agent: DotBot
+Disallow: /
+
+User-agent: SemrushBot
+Disallow: /
+
+User-agent: BLEXBot
+Disallow: /
+
+# Last updated
+# Updated: 2024-12-08 

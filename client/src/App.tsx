@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Loader2, ArrowRight, Sparkles } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { trackEvent, trackSignupIntent, trackConversion } from './utils/analytics';
+import { trackEvent, trackSignupIntent, trackConversion, trackPageView } from './utils/analytics';
 import Layout from './components/Layout';
 import AuthForm from './components/AuthForm';
 import GuidedTour from './components/GuidedTour';
@@ -13,6 +13,7 @@ import Candidates from './pages/Candidates';
 import Analysis from './pages/Analysis';
 import { AnalyticsDashboard } from './pages/Analytics';
 import PricingPage from './pages/Pricing';
+import LandingPage from './pages/LandingPage';
 
 function DemoBanner({ onSignUp }: { onSignUp: () => void }) {
   const [isVisible, setIsVisible] = useState(true);
@@ -212,15 +213,36 @@ function AppContent() {
       )}
       
       <Routes>
+        {/* Landing Page - SEO optimized home page */}
+        <Route path="/" element={<LandingPage />} />
+        
+        {/* Standalone pages */}
         <Route path="/auth" element={<AuthForm />} />
         <Route path="/pricing" element={<PricingPage />} />
+        
+        {/* App routes with Layout */}
         <Route path="/" element={<Layout />}>
-          <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="jobs" element={<JobDescriptions />} />
           <Route path="candidates" element={<Candidates />} />
           <Route path="analytics" element={<AnalyticsDashboard />} />
           <Route path="analysis/:candidateId/:jobId" element={<Analysis />} />
+          
+          {/* SEO Landing Pages for specific keywords */}
+          <Route path="ai-resume-matching" element={<Navigate to="/dashboard" replace />} />
+          <Route path="candidate-screening-ai" element={<Navigate to="/dashboard" replace />} />
+          <Route path="recruitment-automation" element={<Navigate to="/dashboard" replace />} />
+          <Route path="ats-software" element={<Navigate to="/dashboard" replace />} />
+          <Route path="free-resume-scanner" element={<Navigate to="/dashboard" replace />} />
+          
+          {/* Future content pages */}
+          <Route path="help" element={<Navigate to="/dashboard" replace />} />
+          <Route path="faq" element={<Navigate to="/dashboard" replace />} />
+          <Route path="how-it-works" element={<Navigate to="/dashboard" replace />} />
+          <Route path="about" element={<Navigate to="/dashboard" replace />} />
+          <Route path="contact" element={<Navigate to="/dashboard" replace />} />
+          <Route path="privacy" element={<Navigate to="/dashboard" replace />} />
+          <Route path="terms" element={<Navigate to="/dashboard" replace />} />
         </Route>
       </Routes>
     </div>

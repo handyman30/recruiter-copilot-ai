@@ -1,108 +1,203 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
-        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
-  
-  <!-- Main Pages -->
+        xmlns:news="http://www.google.com/schemas/sitemap-news/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"
+        xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">
+
+  <!-- Homepage - Highest Priority -->
   <url>
-    <loc>https://recruitercopilot.ai/</loc>
-    <lastmod>2024-12-07</lastmod>
+    <loc>https://recruitercopilot.live/</loc>
+    <lastmod>2024-12-08</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://recruitercopilot.live/og-image.png</image:loc>
+      <image:title>RecruiterCopilot.live - AI Resume Matching Dashboard</image:title>
+      <image:caption>AI-powered resume matching and candidate screening tool</image:caption>
+    </image:image>
   </url>
-  
+
+  <!-- Dashboard - Main Application -->
   <url>
-    <loc>https://recruitercopilot.ai/dashboard</loc>
-    <lastmod>2024-12-07</lastmod>
-    <changefreq>daily</changefreq>
+    <loc>https://recruitercopilot.live/dashboard</loc>
+    <lastmod>2024-12-08</lastmod>
+    <changefreq>weekly</changefreq>
     <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://recruitercopilot.live/screenshots/dashboard.png</image:loc>
+      <image:title>AI Recruitment Dashboard</image:title>
+      <image:caption>Upload resumes and job descriptions for instant AI matching</image:caption>
+    </image:image>
   </url>
-  
-  <!-- SEO Landing Pages -->
+
+  <!-- Pricing Page - High Commercial Intent -->
   <url>
-    <loc>https://recruitercopilot.ai/ai-resume-matching</loc>
-    <lastmod>2024-12-07</lastmod>
+    <loc>https://recruitercopilot.live/pricing</loc>
+    <lastmod>2024-12-08</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
+    <image:image>
+      <image:loc>https://recruitercopilot.live/screenshots/pricing.png</image:loc>
+      <image:title>AI Resume Matching Pricing Plans</image:title>
+      <image:caption>Free and Pro plans for AI-powered recruitment</image:caption>
+    </image:image>
   </url>
-  
+
+  <!-- Authentication Pages -->
   <url>
-    <loc>https://recruitercopilot.ai/free-resume-scanner</loc>
-    <lastmod>2024-12-07</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <loc>https://recruitercopilot.live/auth</loc>
+    <lastmod>2024-12-08</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
   </url>
-  
+
+  <!-- Job Descriptions Management -->
   <url>
-    <loc>https://recruitercopilot.ai/candidate-screening-software</loc>
-    <lastmod>2024-12-07</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  
-  <url>
-    <loc>https://recruitercopilot.ai/hr-automation-tools</loc>
-    <lastmod>2024-12-07</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  
-  <url>
-    <loc>https://recruitercopilot.ai/recruitment-ai</loc>
-    <lastmod>2024-12-07</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  
-  <!-- Feature Pages -->
-  <url>
-    <loc>https://recruitercopilot.ai/features</loc>
-    <lastmod>2024-12-07</lastmod>
+    <loc>https://recruitercopilot.live/jobs</loc>
+    <lastmod>2024-12-08</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
+    <image:image>
+      <image:loc>https://recruitercopilot.live/screenshots/jobs.png</image:loc>
+      <image:title>Job Description Management</image:title>
+      <image:caption>Manage and analyze job descriptions with AI</image:caption>
+    </image:image>
   </url>
-  
+
+  <!-- Candidates Management -->
   <url>
-    <loc>https://recruitercopilot.ai/pricing</loc>
-    <lastmod>2024-12-07</lastmod>
+    <loc>https://recruitercopilot.live/candidates</loc>
+    <lastmod>2024-12-08</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
+    <image:image>
+      <image:loc>https://recruitercopilot.live/screenshots/candidates.png</image:loc>
+      <image:title>Candidate Management and Screening</image:title>
+      <image:caption>AI-powered candidate analysis and resume screening</image:caption>
+    </image:image>
   </url>
-  
-  <!-- Help & Support -->
+
+  <!-- Analytics Dashboard -->
   <url>
-    <loc>https://recruitercopilot.ai/help</loc>
-    <lastmod>2024-12-07</lastmod>
+    <loc>https://recruitercopilot.live/analytics</loc>
+    <lastmod>2024-12-08</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://recruitercopilot.live/screenshots/analytics.png</image:loc>
+      <image:title>Recruitment Analytics Dashboard</image:title>
+      <image:caption>Track hiring metrics and AI matching performance</image:caption>
+    </image:image>
+  </url>
+
+  <!-- Landing Pages for SEO -->
+  <url>
+    <loc>https://recruitercopilot.live/ai-resume-matching</loc>
+    <lastmod>2024-12-08</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://recruitercopilot.live/candidate-screening-ai</loc>
+    <lastmod>2024-12-08</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://recruitercopilot.live/recruitment-automation</loc>
+    <lastmod>2024-12-08</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <url>
+    <loc>https://recruitercopilot.live/ats-software</loc>
+    <lastmod>2024-12-08</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- Help and Support Pages -->
+  <url>
+    <loc>https://recruitercopilot.live/help</loc>
+    <lastmod>2024-12-08</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+
+  <url>
+    <loc>https://recruitercopilot.live/faq</loc>
+    <lastmod>2024-12-08</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+
+  <url>
+    <loc>https://recruitercopilot.live/how-it-works</loc>
+    <lastmod>2024-12-08</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <!-- About and Legal Pages -->
+  <url>
+    <loc>https://recruitercopilot.live/about</loc>
+    <lastmod>2024-12-08</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+
+  <url>
+    <loc>https://recruitercopilot.live/contact</loc>
+    <lastmod>2024-12-08</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+
+  <url>
+    <loc>https://recruitercopilot.live/privacy</loc>
+    <lastmod>2024-12-08</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+
+  <url>
+    <loc>https://recruitercopilot.live/terms</loc>
+    <lastmod>2024-12-08</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+
+  <!-- Blog/Content Pages (if added in future) -->
+  <url>
+    <loc>https://recruitercopilot.live/blog</loc>
+    <lastmod>2024-12-08</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
-  
+
   <url>
-    <loc>https://recruitercopilot.ai/how-it-works</loc>
-    <lastmod>2024-12-07</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
+    <loc>https://recruitercopilot.live/blog/ai-recruitment-trends-2024</loc>
+    <lastmod>2024-12-08</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
   </url>
-  
-  <!-- Blog Pages for SEO -->
+
   <url>
-    <loc>https://recruitercopilot.ai/blog/ai-recruiting-guide</loc>
-    <lastmod>2024-12-07</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
+    <loc>https://recruitercopilot.live/blog/how-to-screen-candidates-with-ai</loc>
+    <lastmod>2024-12-08</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
   </url>
-  
+
   <url>
-    <loc>https://recruitercopilot.ai/blog/resume-screening-best-practices</loc>
-    <lastmod>2024-12-07</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  
-  <url>
-    <loc>https://recruitercopilot.ai/blog/future-of-recruitment</loc>
-    <lastmod>2024-12-07</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
+    <loc>https://recruitercopilot.live/blog/resume-matching-best-practices</loc>
+    <lastmod>2024-12-08</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
   </url>
 
 </urlset> 

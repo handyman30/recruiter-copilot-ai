@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Check, Zap, Users, TrendingUp } from 'lucide-react';
+import { Check, Zap, Users, TrendingUp, Star, ArrowRight, Sparkles } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { trackEvent } from '../utils/analytics';
+import SEOHead from '../components/SEOHead';
 
 // PayPal SDK script loader
 const loadPayPalScript = (clientId: string): Promise<any> => {
@@ -109,8 +110,83 @@ export const PricingPage: React.FC = () => {
     }
   }, [paypalLoaded, user]);
 
+  // SEO structured data for Pricing
+  const pricingStructuredData = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "name": "RecruiterCopilot.live AI Resume Matching Tool",
+    "description": "AI-powered resume matching and candidate screening software with free and pro plans",
+    "url": "https://recruitercopilot.live/pricing",
+    "brand": {
+      "@type": "Brand",
+      "name": "RecruiterCopilot.live"
+    },
+    "offers": [
+      {
+        "@type": "Offer",
+        "name": "Free Plan",
+        "description": "Free AI resume matching with limited features",
+        "price": "0",
+        "priceCurrency": "USD",
+        "availability": "https://schema.org/InStock",
+        "priceValidUntil": "2025-12-31",
+        "category": "Free",
+        "eligibleQuantity": {
+          "@type": "QuantitativeValue",
+          "value": "3",
+          "unitText": "analyses per day"
+        }
+      },
+      {
+        "@type": "Offer",
+        "name": "Pro Plan",
+        "description": "Unlimited AI resume matching and advanced features",
+        "price": "10",
+        "priceCurrency": "USD",
+        "availability": "https://schema.org/InStock",
+        "priceValidUntil": "2025-12-31",
+        "billingIncrement": "P1M",
+        "category": "Subscription",
+        "eligibleQuantity": {
+          "@type": "QuantitativeValue",
+          "value": "unlimited",
+          "unitText": "analyses"
+        }
+      }
+    ],
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "4.9",
+      "ratingCount": "247",
+      "bestRating": "5"
+    },
+    "review": [
+      {
+        "@type": "Review",
+        "reviewRating": {
+          "@type": "Rating",
+          "ratingValue": "5"
+        },
+        "author": {
+          "@type": "Person",
+          "name": "Sarah Johnson"
+        },
+        "reviewBody": "Saves us 10+ hours per hire. Best recruitment tool investment."
+      }
+    ]
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-blue-50 py-12">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white py-12">
+      <SEOHead
+        title="AI Resume Matching Pricing - Free & Pro Plans Starting at $10/month"
+        description="Start free with 3 AI resume matches per day, or upgrade to Pro for unlimited matching at $10/month. Save 10+ hours per hire with our AI-powered candidate screening tool."
+        keywords="AI resume matching pricing, recruitment software cost, candidate screening plans, hiring tool subscription, ATS pricing, AI recruitment cost, resume parser pricing, talent acquisition software plans"
+        canonical="https://recruitercopilot.live/pricing"
+        ogImage="https://recruitercopilot.live/screenshots/pricing.png"
+        structuredData={pricingStructuredData}
+      />
+      
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center mb-12">

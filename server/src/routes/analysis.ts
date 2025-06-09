@@ -17,8 +17,8 @@ router.post('/:candidateId/:jobId', async (req, res) => {
     // Check if analysis already exists
     const existingAnalysis = await prisma.analysis.findFirst({
       where: {
-        candidateId,
-        jobId,
+          candidateId,
+          jobId,
         userId,
       },
     });
@@ -153,8 +153,8 @@ router.get('/:candidateId/:jobId', async (req, res) => {
     
     const analysis = await prisma.analysis.findFirst({
       where: {
-        candidateId,
-        jobId,
+          candidateId,
+          jobId,
         userId,
       },
       include: {

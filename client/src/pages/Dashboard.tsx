@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import FileUpload from '../components/FileUpload';
 import UsageTracker from '../components/UsageTracker';
 import DemoLimitsTracker from '../components/DemoLimitsTracker';
+import SEOHead from '../components/SEOHead';
 import { jobDescriptionApi, candidateApi, analysisApi } from '../services/api';
 import { JobDescription, Candidate, Analysis } from '../types';
 
@@ -19,6 +20,35 @@ function Dashboard() {
   const [recentJobUpload, setRecentJobUpload] = useState<string | null>(null);
   const [recentCandidateUpload, setRecentCandidateUpload] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>('');
+
+  // SEO structured data for Dashboard
+  const dashboardStructuredData = {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "AI Resume Matching Dashboard",
+    "description": "Upload job descriptions and resumes for instant AI-powered candidate matching and analysis",
+    "url": "https://recruitercopilot.live/dashboard",
+    "applicationCategory": "BusinessApplication",
+    "operatingSystem": "Web Browser",
+    "author": {
+      "@type": "Organization",
+      "name": "RecruiterCopilot.live"
+    },
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD",
+      "name": "Free AI Resume Matching"
+    },
+    "featureList": [
+      "Upload job descriptions",
+      "Upload candidate resumes", 
+      "AI-powered matching analysis",
+      "Skills gap analysis",
+      "Match percentage scoring",
+      "Automated candidate screening"
+    ]
+  };
 
   // Queries
   const { data: jobs = [] } = useQuery({
@@ -158,6 +188,15 @@ function Dashboard() {
 
   return (
     <div className="space-y-8">
+      <SEOHead
+        title="AI Resume Matching Dashboard - Upload & Analyze Candidates Instantly"
+        description="Upload job descriptions and resumes for instant AI matching analysis. Get 90%+ accurate candidate screening with skills analysis, match scoring, and automated recommendations."
+        keywords="AI resume matching dashboard, candidate screening tool, resume upload, job description analysis, AI recruitment dashboard, talent acquisition software, automated hiring, candidate analysis, skills matching, recruitment automation"
+        canonical="https://recruitercopilot.live/dashboard"
+        ogImage="https://recruitercopilot.live/screenshots/dashboard.png"
+        structuredData={dashboardStructuredData}
+      />
+      
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
         <p className="mt-2 text-gray-600">

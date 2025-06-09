@@ -1,0 +1,121 @@
+{
+  "name": "RecruiterCopilot.live - AI Resume Matching Tool",
+  "short_name": "RecruiterCopilot",
+  "description": "AI-powered resume matching and candidate screening tool that helps recruiters find perfect candidates 10x faster",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#6366f1",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en-US",
+  "categories": ["business", "productivity", "utilities"],
+  "screenshots": [
+    {
+      "src": "/screenshots/dashboard-mobile.png",
+      "sizes": "640x1136",
+      "type": "image/png",
+      "platform": "narrow",
+      "label": "AI Resume Matching Dashboard on Mobile"
+    },
+    {
+      "src": "/screenshots/dashboard-desktop.png", 
+      "sizes": "1280x720",
+      "type": "image/png",
+      "platform": "wide",
+      "label": "AI Resume Matching Dashboard on Desktop"
+    }
+  ],
+  "icons": [
+    {
+      "src": "/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/android-chrome-512x512.png",
+      "sizes": "512x512", 
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon-32x32.png",
+      "sizes": "32x32",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon-16x16.png", 
+      "sizes": "16x16",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Upload Resume",
+      "short_name": "Upload",
+      "description": "Upload a candidate resume for AI analysis",
+      "url": "/dashboard?action=upload-resume",
+      "icons": [
+        {
+          "src": "/icons/upload-icon.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "View Analytics",
+      "short_name": "Analytics", 
+      "description": "View recruitment analytics and insights",
+      "url": "/analytics",
+      "icons": [
+        {
+          "src": "/icons/analytics-icon.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Candidate List",
+      "short_name": "Candidates",
+      "description": "View and manage candidates",
+      "url": "/candidates",
+      "icons": [
+        {
+          "src": "/icons/candidates-icon.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Upgrade to Pro",
+      "short_name": "Upgrade",
+      "description": "Upgrade to Pro for unlimited matching",
+      "url": "/pricing",
+      "icons": [
+        {
+          "src": "/icons/upgrade-icon.png", 
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false,
+  "id": "recruitercopilot-live",
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "handle_links": "preferred",
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  }
+} 
