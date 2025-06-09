@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Loader2, ArrowRight, Sparkles } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { trackEvent, trackSignupIntent, trackConversion, trackPageView } from './utils/analytics';
+import { trackEvent, trackSignupIntent, trackConversion } from './utils/analytics';
 import Layout from './components/Layout';
 import AuthForm from './components/AuthForm';
 import GuidedTour from './components/GuidedTour';

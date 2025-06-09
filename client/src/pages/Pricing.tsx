@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Check, Zap, Users, TrendingUp, Star, ArrowRight, Sparkles } from 'lucide-react';
+import { Check, Zap, Users, TrendingUp } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { trackEvent } from '../utils/analytics';
 import SEOHead from '../components/SEOHead';
